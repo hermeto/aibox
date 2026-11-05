@@ -3,6 +3,7 @@ package models
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -38,26 +39,13 @@ func TestShippedCatalogValidates(t *testing.T) {
 	}
 }
 
-const valid = `apiVersion: aibox.dev/v1alpha1
-kind: ModelCatalog
-models:
-  - id: m1
-    enabled: true
-    profiles: [local]
-    source: {type: huggingface, repo: org/m1, revision: "0123456789abcdef0123456789abcdef01234567"}
-    license: apache-2.0
-    gated: false
-    quantization: bf16
-    tensorParallelSize: 1
-    maxModelLen: 4096
-    minGPUClass: gpu-l4
-    runtime: vllm
-    loadMethod: s3-stream
-    slo: {ttftP99Ms: 1000, itlP99Ms: 100}
-`
-
 func TestParseErrorsCarryPaths(t *testing.T) {
-	if _, err := Parse("ok.yaml", []byte(valid)); err != nil {
+	raw, err := os.ReadFile(filepath.Join("testdata", "valid-catalog.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid := string(raw)
+	if _, err := Parse("ok.yaml", raw); err != nil {
 		t.Fatalf("valid catalog rejected: %v", err)
 	}
 	cases := map[string]struct {
