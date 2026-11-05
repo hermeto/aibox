@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hermeto/aibox/schemas/catalog.schema.json",
+  "title": "AIBox model catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "models"],
+  "properties": {
+    "apiVersion": { "const": "aibox.dev/v1alpha1" },
+    "kind": { "const": "ModelCatalog" },
+    "models": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/model" } }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "enabled", "profiles", "source", "license", "gated", "quantization", "tensorParallelSize", "maxModelLen", "minGPUClass", "runtime", "loadMethod", "slo"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]{0,38}[a-z0-9])?$" },
+        "description": { "type": "string", "maxLength": 200 },
+        "enabled": { "type": "boolean" },
+        "serve": { "type": "boolean", "description": "Whether the platform serves the model (default true); false for models that only test the weight lifecycle." },
+        "profiles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,30}$" } },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["huggingface", "simulator"] },
+            "repo": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+            "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+          },
+          "if": { "properties": { "type": { "const": "huggingface" } } },
+          "then": { "required": ["repo", "revision"] },
+          "else": { "not": { "anyOf": [{ "required": ["repo"] }, { "required": ["revision"] }] } }
+        },
+        "license": { "type": "string", "minLength": 1 },
+        "gated": { "type": "boolean" },
+        "quantization": { "enum": ["bf16", "fp16", "fp8", "awq", "none"] },
+        "tensorParallelSize": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "maxModelLen": { "type": "integer", "minimum": 256, "maximum": 1048576 },
+        "minGPUClass": { "enum": ["gpu-l4", "gpu-a10g", "gpu-h100", "gpu-sim", "none"] },
+        "runtime": { "enum": ["vllm", "sglang", "simulator"] },
+        "runtimeFlags": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enablePrefixCaching": { "type": "boolean" },
+            "enableChunkedPrefill": { "type": "boolean" },
+            "gpuMemoryUtilization": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.98 },
+            "maxNumSeqs": { "type": "integer", "minimum": 1, "maximum": 4096 },
+            "kvCacheDtype": { "enum": ["auto", "fp8", "fp8_e4m3", "fp8_e5m2"] },
+            "extraArgs": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "loadMethod": { "enum": ["s3-stream", "nvme-cache", "hf-download", "none"] },
+        "slo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ttftP99Ms", "itlP99Ms"],
+          "properties": {
+            "ttftP99Ms": { "type": "integer", "minimum": 1 },
+            "itlP99Ms": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

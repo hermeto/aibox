@@ -10,5 +10,8 @@ import "embed"
 //go:embed *.json
 var FS embed.FS
 
-// Profile is the file name of the profile schema.
-const Profile = "profile.schema.json"
+// Schema file names.
+const (
+	Profile = "profile.schema.json"
+	Catalog = "catalog.schema.json"
+)
