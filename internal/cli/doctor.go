@@ -24,13 +24,9 @@ credentials are configured. The exit code is 1 if any check fails.`,
 			if err != nil {
 				return err
 			}
-			factory := app.AWS
-			if factory == nil {
-				factory = awsapi.New
-			}
 			report := doctor.Run(cmd.Context(), p, doctor.Env{
 				Runner: app.readOnlyRunner(),
-				AWS:    factory,
+				AWS:    app.awsFactory(),
 				Getenv: app.getenv,
 				GOOS:   goos(),
 			})
@@ -43,4 +39,11 @@ credentials are configured. The exit code is 1 if any check fails.`,
 			return nil
 		},
 	}
+}
+
+func (a *App) awsFactory() doctor.AWSFactory {
+	if a.AWS != nil {
+		return a.AWS
+	}
+	return awsapi.New
 }

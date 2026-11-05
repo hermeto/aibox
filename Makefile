@@ -38,7 +38,7 @@ SHELLCHECK    := $(BIN)/shellcheck
 YAMLLINT      := uvx yamllint==$(YAMLLINT_VERSION)
 MARKDOWNLINT  := npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION)
 
-SHELL_SCRIPTS = $(shell find . -name '*.sh' -not -path './.specify/*' -not -path './bin/*' -not -path './node_modules/*' | sort)
+SHELL_SCRIPTS = $(shell find . -name '*.sh' -not -path './.specify/*' -not -path './bin/*' -not -path './node_modules/*' -not -path '*/.terraform/*' | sort)
 
 ##@ General
 
@@ -143,6 +143,23 @@ lint-markdown: ## Lint Markdown files
 .PHONY: lint-editorconfig
 lint-editorconfig: $(EC) ## Check EditorConfig compliance
 	$(EC)
+
+TF      ?= tofu
+TF_DIRS := infra/terraform/aws infra/terraform/aws/bootstrap
+
+.PHONY: terraform-check
+terraform-check: ## Terraform/OpenTofu: fmt, validate and mocked tests (no credentials)
+	$(TF) fmt -check -recursive infra/terraform
+	for d in $(TF_DIRS); do \
+		$(TF) -chdir=$$d init -backend=false -input=false && \
+		$(TF) -chdir=$$d validate && \
+		$(TF) -chdir=$$d test || exit 1; \
+	done
+	hack/check-tf-lock.sh $(TF_DIRS)
+
+.PHONY: terraform-lint
+terraform-lint: ## tflint with the AWS ruleset (needs network for the plugin)
+	cd infra/terraform/aws && tflint --init && tflint --recursive
 
 .PHONY: test
 test: ## Run unit tests (race detector) and script tests

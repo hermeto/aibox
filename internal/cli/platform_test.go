@@ -6,12 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/hermeto/aibox/internal/doctor"
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
 	"github.com/hermeto/aibox/internal/platform"
@@ -65,13 +67,108 @@ func TestUpDoctorFailureStops(t *testing.T) {
 	}
 }
 
-func TestCloudProfilesNotImplementedYet(t *testing.T) {
+func TestSmokeCloudNotImplementedYet(t *testing.T) {
 	setProfiles(t)
-	for _, c := range []string{"up", "down", "smoke"} {
-		r := runCLI(t, &App{}, c, "--profile", "aws-dev")
-		if r.code != ExitNotImplemented || !strings.Contains(r.stderr, "aws-dev") {
-			t.Fatalf("%s: %d %q", c, r.code, r.stderr)
-		}
+	r := runCLI(t, &App{}, "smoke", "--profile", "aws-dev")
+	if r.code != ExitNotImplemented || !strings.Contains(r.stderr, "aws-dev") {
+		t.Fatalf("%d %q", r.code, r.stderr)
+	}
+}
+
+type okAWS struct{}
+
+func (okAWS) CallerIdentity(context.Context) (string, string, error) {
+	return "000000000000", "arn:aws:iam::000000000000:user/test", nil
+}
+func (okAWS) InstanceTypesOffered(_ context.Context, types []string) (map[string]bool, error) {
+	m := map[string]bool{}
+	for _, t := range types {
+		m[t] = true
+	}
+	return m, nil
+}
+func (okAWS) InstanceVCPUs(_ context.Context, types []string) (map[string]int, error) {
+	m := map[string]int{}
+	for _, t := range types {
+		m[t] = 4
+	}
+	return m, nil
+}
+func (okAWS) EC2Quotas(context.Context) (map[string]float64, error) {
+	return map[string]float64{"All G and VT Spot Instance Requests": 64, "Running On-Demand G and VT instances": 64}, nil
+}
+
+func awsApp(t *testing.T) *App {
+	t.Helper()
+	root, _ := filepath.Abs(filepath.Join("..", ".."))
+	tf := "tofu -chdir=" + filepath.Join(root, platform.TerraformDir)
+	r := exec.NewFake().WithPath("tofu").WithPath("kubectl").WithPath("helm").
+		On("tofu version", exec.Result{Stdout: "OpenTofu v1.13.8"}, nil).
+		On("kubectl version --client", exec.Result{Stdout: "Client Version: v1.37.2"}, nil).
+		On("helm version --short", exec.Result{Stdout: "v4.3.1"}, nil).
+		On("git remote get-url origin", exec.Result{Stdout: "https://github.com/hermeto/aibox.git"}, nil).
+		On("git rev-parse --abbrev-ref HEAD", exec.Result{Stdout: "main"}, nil).
+		On("git rev-list --count @{u}..HEAD", exec.Result{Stdout: "0"}, nil).
+		On("git config user.email", exec.Result{Stdout: "dev@example.com"}, nil).
+		OnPrefix(tf+" init", exec.Result{}, nil).
+		OnPrefix(tf+" plan", exec.Result{}, nil).
+		OnPrefix(tf+" apply", exec.Result{}, nil).
+		OnPrefix(tf+" destroy", exec.Result{}, nil).
+		On(tf+" output -json", exec.Result{Stdout: `{"cluster_name":{"value":"aibox-dev"},"cluster_endpoint":{"value":"https://example.invalid"},"cluster_certificate_authority_data":{"value":"Y2E="},"region":{"value":"us-east-1"}}`}, nil).
+		OnPrefix("helm upgrade --install argocd", exec.Result{}, nil)
+	stateDir := t.TempDir()
+	return &App{
+		Runner:   r,
+		AWS:      func(context.Context, string) (doctor.AWSClient, error) { return okAWS{}, nil },
+		Account:  func(context.Context, string) (string, error) { return "000000000000", nil },
+		EgressIP: func(context.Context) (string, error) { return "203.0.113.10", nil },
+		KubeFile: func(string, string) (platform.KubeAPI, error) { return fakeKube{}, nil },
+		Getenv: func(k string) string {
+			if k == "AIBOX_STATE_DIR" {
+				return stateDir
+			}
+			return ""
+		},
+	}
+}
+
+func TestUpAndDownAWSWithFakes(t *testing.T) {
+	setProfiles(t)
+	app := awsApp(t)
+	r := runCLI(t, app, "up", "--profile", "aws-dev", "--yes", "-o", "json")
+	if r.code != 0 {
+		t.Fatalf("up: %d %s", r.code, r.stderr)
+	}
+	var res platform.AWSUpResult
+	if err := json.Unmarshal([]byte(r.stdout), &res); err != nil || !strings.HasPrefix(res.RunID, "aws-dev-") {
+		t.Fatalf("%q %v", r.stdout, err)
+	}
+	app.In = strings.NewReader("no\n")
+	r = runCLI(t, app, "down", "--profile", "aws-dev")
+	if r.code != ExitFailure || !strings.Contains(r.stderr, "not confirmed") {
+		t.Fatalf("declined down: %d %q", r.code, r.stderr)
+	}
+	app.In = strings.NewReader("yes\n")
+	r = runCLI(t, app, "down", "--profile", "aws-dev")
+	if r.code != 0 || !strings.Contains(r.stdout, "deleted") {
+		t.Fatalf("down: %d %q %q", r.code, r.stdout, r.stderr)
+	}
+}
+
+func TestUpAWSStopsOnSkippedDoctor(t *testing.T) {
+	setProfiles(t)
+	app := awsApp(t)
+	app.AWS = func(context.Context, string) (doctor.AWSClient, error) { return nil, doctor.ErrNoCredentials }
+	r := runCLI(t, app, "up", "--profile", "aws-dev", "--yes")
+	if r.code != ExitFailure || !strings.Contains(r.stderr, "no credentials") {
+		t.Fatalf("%d %q", r.code, r.stderr)
+	}
+}
+
+func TestConfirmWithoutInput(t *testing.T) {
+	app := &App{In: strings.NewReader(""), Err: io.Discard}
+	if ok, err := app.confirm("go?"); err == nil || ok {
+		t.Fatalf("%v %v", ok, err)
 	}
 }
 

@@ -1,0 +1,3 @@
+profile: aws-bench
+# Components get aws overlays from feature 006 on (GPU node pools, runtimes, gateway, ...).
+apps: []

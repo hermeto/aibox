@@ -64,3 +64,6 @@ bench/results/**/raw/
 node_modules/
 .cache/
 hack/crds/
+
+# --- AIBox generated per-run state (account-specific; never commit) ---
+.aibox/

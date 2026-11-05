@@ -40,6 +40,13 @@ curl -s http://127.0.0.1:30080/v1/chat/completions -H 'Content-Type: application
 Argo CD tracks your current branch on `origin`; push first, or use `--from-worktree` to apply
 unpushed changes. The Argo CD UI is at <http://127.0.0.1:30081> (user `admin`).
 
+## Cloud profiles (AWS)
+
+`aibox up --profile aws-dev` provisions VPC, EKS, IAM (Pod Identity) and an encrypted weights
+bucket with Terraform/OpenTofu (`infra/terraform/aws`), then bootstraps Argo CD. **It costs
+money** — follow [docs/runbooks/aws-first-run.md](docs/runbooks/aws-first-run.md) (quotas,
+state bucket, first run, teardown) and always finish with `aibox down --profile aws-dev`.
+
 ## The `aibox` CLI
 
 ```bash

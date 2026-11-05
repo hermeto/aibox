@@ -31,6 +31,7 @@ type Options struct {
 
 // App holds the dependencies of the command tree; tests replace them with fakes.
 type App struct {
+	In     io.Reader // confirmation prompts (nil means os.Stdin)
 	Out    io.Writer
 	Err    io.Writer
 	Runner exec.Runner         // nil means exec.Real
@@ -38,6 +39,12 @@ type App struct {
 	Getenv func(string) string // nil means os.Getenv
 	// Kube connects to a kubeconfig context (nil means client-go).
 	Kube func(kubeContext string) (platform.KubeAPI, error)
+	// KubeFile connects with an explicit kubeconfig file (nil means client-go).
+	KubeFile func(kubeconfig, kubeContext string) (platform.KubeAPI, error)
+	// Account returns the AWS account ID (nil means sts:GetCallerIdentity).
+	Account func(ctx context.Context, region string) (string, error)
+	// EgressIP returns the operator's public IP (nil means checkip.amazonaws.com).
+	EgressIP func(ctx context.Context) (string, error)
 
 	Opts   Options
 	Format output.Format

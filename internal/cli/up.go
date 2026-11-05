@@ -30,6 +30,8 @@ func (a *App) localPlatform(p *profile.Profile) (*platform.Local, error) {
 func newUpCmd(app *App) *cobra.Command {
 	var (
 		opts       platform.UpOptions
+		adminCIDRs []string
+		owner      string
 		skipDoctor bool
 	)
 	cmd := &cobra.Command{
@@ -48,15 +50,29 @@ tree (unpushed changes, private forks).`,
 			if err != nil {
 				return err
 			}
-			if p.IsCloud() {
-				return notImplementedFor("up", p.Metadata.Name, "004")
-			}
 			if !skipDoctor {
-				report := doctor.Run(cmd.Context(), p, doctor.Env{Runner: app.readOnlyRunner(), Getenv: app.getenv, GOOS: goos()})
-				if !report.OK {
-					_ = output.Print(app.Err, output.Text, report)
-					return errors.New("preflight checks failed (see above); fix them or pass --skip-doctor")
+				env := doctor.Env{Runner: app.readOnlyRunner(), Getenv: app.getenv, GOOS: goos()}
+				if p.IsCloud() {
+					env.AWS = app.awsFactory()
 				}
+				report := doctor.Run(cmd.Context(), p, env)
+				if !report.OK || (p.IsCloud() && report.Summary.Skip > 0) {
+					_ = output.Print(app.Err, output.Text, report)
+					return errors.New("preflight checks failed or were skipped (see above); fix them or pass --skip-doctor")
+				}
+			}
+			if p.IsCloud() {
+				a, err := app.awsPlatform(p)
+				if err != nil {
+					return err
+				}
+				res, err := a.Up(cmd.Context(), platform.AWSUpOptions{
+					RepoURL: opts.RepoURL, Revision: opts.Revision, AdminCIDRs: adminCIDRs, Owner: owner, Timeout: opts.Timeout,
+				})
+				if err != nil {
+					return err
+				}
+				return app.print(res)
 			}
 			l, err := app.localPlatform(p)
 			if err != nil {
@@ -75,6 +91,8 @@ tree (unpushed changes, private forks).`,
 	f.BoolVar(&opts.FromWorktree, "from-worktree", false, "apply platform manifests from the working tree instead of Argo CD tracking git")
 	f.DurationVar(&opts.Timeout, "timeout", 10*time.Minute, "maximum time to wait for Argo CD and Applications")
 	f.BoolVar(&skipDoctor, "skip-doctor", false, "skip the preflight checks")
+	f.StringSliceVar(&adminCIDRs, "admin-cidr", nil, "AWS: CIDR(s) allowed to reach the EKS API (default: your egress IP /32)")
+	f.StringVar(&owner, "owner", "", "AWS: owner tag (default: profile ownerEmail, then git user.email)")
 	return cmd
 }
 
@@ -90,7 +108,15 @@ func newDownCmd(app *App) *cobra.Command {
 				return err
 			}
 			if p.IsCloud() {
-				return notImplementedFor("down", p.Metadata.Name, "004")
+				a, err := app.awsPlatform(p)
+				if err != nil {
+					return err
+				}
+				deleted, err := a.Down(cmd.Context())
+				if err != nil {
+					return err
+				}
+				return app.print(downResult{Profile: p.Metadata.Name, Cluster: p.Spec.Cluster.Name, Deleted: deleted})
 			}
 			l, err := app.localPlatform(p)
 			if err != nil {
