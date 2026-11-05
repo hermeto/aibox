@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hermeto/aibox/schemas/profile.schema.json",
+  "title": "AIBox profile",
+  "description": "An AIBox environment definition (profiles/<name>.yaml).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "aibox.dev/v1alpha1" },
+    "kind": { "const": "Profile" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,30}$" },
+        "description": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "cluster", "guardrails"],
+      "properties": {
+        "provider": { "enum": ["kind", "aws"] },
+        "cluster": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "kubernetesVersion"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$" },
+            "kubernetesVersion": { "type": "string", "pattern": "^1\\.[0-9]{2}$" }
+          }
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minCPUs", "minMemoryGiB", "recommendedMemoryGiB"],
+          "properties": {
+            "minCPUs": { "type": "integer", "minimum": 1, "maximum": 128 },
+            "minMemoryGiB": { "type": "number", "minimum": 1 },
+            "recommendedMemoryGiB": { "type": "number", "minimum": 1 }
+          }
+        },
+        "aws": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["region", "gpuClasses"],
+          "properties": {
+            "region": { "type": "string", "pattern": "^[a-z]{2}(-gov)?-[a-z]+-[0-9]$" },
+            "gpuClasses": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/gpuClass" }
+            }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ttl"],
+          "properties": {
+            "ttl": { "type": "string", "pattern": "^([0-9]+h)?([0-9]+m)?$", "minLength": 2 },
+            "ownerEmail": { "type": "string", "format": "email" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "provider": { "const": "kind" } } },
+          "then": { "required": ["local"], "not": { "required": ["aws"] } }
+        },
+        {
+          "if": { "properties": { "provider": { "const": "aws" } } },
+          "then": { "required": ["aws"], "not": { "required": ["local"] } }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "gpuClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "instanceTypes", "capacityType", "maxNodes"],
+      "properties": {
+        "name": { "enum": ["gpu-l4", "gpu-a10g", "gpu-h100"] },
+        "instanceTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*\\.[a-z0-9]+$" }
+        },
+        "capacityType": { "enum": ["spot", "on-demand", "capacity-block"] },
+        "maxNodes": { "type": "integer", "minimum": 0, "maximum": 64 },
+        "capacityReservationId": { "type": "string", "pattern": "^cr-[0-9a-f]{8,17}$" }
+      },
+      "if": { "properties": { "capacityType": { "const": "capacity-block" } } },
+      "then": { "required": ["capacityReservationId"] },
+      "else": { "not": { "required": ["capacityReservationId"] } }
+    }
+  }
+}

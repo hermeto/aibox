@@ -1,0 +1,27 @@
+aibox brings up a reference LLM inference platform on Kubernetes (locally on kind
+or on AWS EKS), runs reproducible benchmarks and reports cost per 1M tokens and latency.
+
+Usage:
+  aibox [command]
+
+Available Commands:
+  bench       Run a declared benchmark experiment
+  cost        Show the accumulated cost of the current cloud run
+  doctor      Check prerequisites for a profile (tools, container runtime, AWS quotas)
+  down        Tear down the platform for a profile and check for orphans
+  help        Help about any command
+  models      List and mirror catalog models
+  report      Generate the benchmark report from results
+  smoke       Send one request per model and check metrics, traces and dashboards
+  up          Bring up the platform for a profile (cluster, GitOps, workloads)
+  version     Print version information
+
+Flags:
+      --dry-run          print external commands instead of running them
+  -h, --help             help for aibox
+  -o, --output string    output format: text or json (default "text")
+      --profile string   profile name (profiles/<name>.yaml) or path to a profile file (default "local")
+  -v, --verbose          verbose (debug) logging on stderr
+  -y, --yes              assume yes for confirmations
+
+Use "aibox [command] --help" for more information about a command.

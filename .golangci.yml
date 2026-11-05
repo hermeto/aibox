@@ -17,6 +17,11 @@ linters:
       rules:
         - name: exported
           disabled: true
+  exclusions:
+    rules:
+      # Tests read golden files and fixtures from testdata/ by design.
+      - path: _test\.go
+        linters: [gosec]
 formatters:
   enable:
     - gofmt

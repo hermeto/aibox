@@ -1,0 +1,11 @@
+apiVersion: aibox.dev/v1alpha1
+kind: Profile
+metadata: {name: capacity-block-no-reservation}
+spec:
+  provider: aws
+  cluster: {name: x, kubernetesVersion: "1.34"}
+  aws:
+    region: us-east-1
+    gpuClasses:
+      - {name: gpu-h100, instanceTypes: [p5.48xlarge], capacityType: capacity-block, maxNodes: 1}
+  guardrails: {ttl: 4h}

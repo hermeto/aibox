@@ -1,0 +1,9 @@
+apiVersion: aibox.dev/v1alpha1
+kind: Profile
+metadata: {name: unknown-key}
+spec:
+  provider: kind
+  clustr: {name: x, kubernetesVersion: "1.34"}
+  cluster: {name: x, kubernetesVersion: "1.34"}
+  local: {minCPUs: 4, minMemoryGiB: 6, recommendedMemoryGiB: 8}
+  guardrails: {ttl: 4h}

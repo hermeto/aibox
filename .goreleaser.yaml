@@ -19,9 +19,9 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X main.version={{ .Version }}
-      - -X main.commit={{ .FullCommit }}
-      - -X main.date={{ .CommitDate }}
+      - -X github.com/hermeto/aibox/internal/version.Version={{ .Version }}
+      - -X github.com/hermeto/aibox/internal/version.Commit={{ .FullCommit }}
+      - -X github.com/hermeto/aibox/internal/version.Date={{ .CommitDate }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:

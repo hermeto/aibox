@@ -18,6 +18,13 @@ Prerequisites: `git`, `go` (version from `go.mod`), [`uv`](https://docs.astral.s
 Linux (apt or official installers) — Homebrew is not required. Run `make help` for every
 target.
 
+## Working on the CLI
+
+The CLI lives in `cmd/aibox` and `internal/` (`cli`, `profile`, `doctor`, `exec`, `output`,
+`awsapi`). External commands always go through `internal/exec.Runner`, so tests use
+`exec.Fake` and `--dry-run` works everywhere. Golden files (help output, doctor reports) are
+refreshed with `go test ./internal/cli ./internal/doctor -update` — review the diff.
+
 ## How work is organized: Spec Kit
 
 Every feature follows Spec-Driven Development with [Spec Kit](https://github.com/github/spec-kit):

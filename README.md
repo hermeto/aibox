@@ -17,6 +17,20 @@ OpenTelemetry, and runs locally on kind (no GPU) as well as on AWS EKS.
 - Architecture decisions: [`docs/adr/`](docs/adr/README.md)
 - Feature specs (Spec Kit): [`specs/`](specs/)
 
+## The `aibox` CLI
+
+```bash
+make build                                   # ./bin/aibox
+./bin/aibox --help                           # up, down, models, smoke, bench, report, cost, doctor, version
+./bin/aibox doctor --profile local           # preflight checks (tools, Docker resources)
+./bin/aibox doctor --profile aws-dev -o json # read-only AWS checks; skipped without credentials
+make up PROFILE=local                        # make targets are thin wrappers around the CLI
+```
+
+Profiles live in [`profiles/`](profiles/) and are validated against
+[`schemas/profile.schema.json`](schemas/profile.schema.json). Exit codes: 0 ok, 1 failure,
+2 not implemented yet, 64 usage error.
+
 ## Contributing
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `make dev-setup && make lint test` is all you

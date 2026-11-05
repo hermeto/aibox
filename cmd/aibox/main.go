@@ -1,22 +1,18 @@
-// Command aibox is the AIBox command-line interface.
-//
-// This is a placeholder so that Go CI jobs have something to build, lint and test.
-// Feature 002 (cli-skeleton) replaces it with the real CLI.
+// Command aibox is the AIBox command-line interface. See `aibox --help`.
 package main
 
 import (
-	"fmt"
-	"io"
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/hermeto/aibox/internal/cli"
 )
 
-func run(w io.Writer) int {
-	if _, err := fmt.Fprintln(w, "aibox: under construction — see the v1.0 roadmap issue"); err != nil {
-		return 1
-	}
-	return 0
-}
-
 func main() {
-	os.Exit(run(os.Stdout))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	code := cli.Execute(ctx, os.Args[1:], os.Stdout, os.Stderr)
+	stop()
+	os.Exit(code)
 }
