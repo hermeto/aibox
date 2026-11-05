@@ -24,7 +24,7 @@
 ## Phase 3: User Story 1 — up/down (P1)
 
 - [ ] T008 [US1] Tests first: `internal/platform/local_test.go` (create vs reuse cluster, helm install args, root app object, timeout error naming the app, down when absent)
-- [ ] T009 [US1] `internal/platform/local.go` orchestration (doctor → kind → Argo CD → root app → wait → endpoints)
+- [ ] T009 [US1] `internal/platform/local.go` orchestration (doctor → kind → Argo CD → root app → wait → endpoints), cluster/profile Kubernetes version consistency check, `--dry-run` support
 - [ ] T010 [US1] `internal/cli/up.go`, `internal/cli/down.go` replace stubs (flags `--repo-url`, `--revision`, `--from-worktree`, `--timeout`, `--skip-doctor`)
 
 ## Phase 4: User Story 2 — sample model + smoke (P1)
@@ -49,6 +49,10 @@
 - [ ] T019 [P] `make validate-manifests` (helm template + kustomize build | kubeconform) and CI lint step
 - [ ] T020 Pin the Argo CD image digest from the first e2e run
 - [ ] T021 Verify lint/test/DoD; update PROGRESS.md
+
+## Analysis log
+
+`/speckit-analyze` pass 1 (2026-11-05): 0 CRITICAL, 2 HIGH. HIGH — edge case "`--dry-run` prints commands and manifests" had no task; HIGH — clarification "CLI checks node image vs profile `kubernetesVersion`" had no task. Both folded into T009. Coverage: FR 10/10, SC 4/4 (SC-004 → T018). Pass 2: clean.
 
 ## Dependencies
 
