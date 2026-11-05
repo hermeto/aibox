@@ -8,6 +8,19 @@
 
 **Input**: User description: "One-command local platform (`aibox up --profile local`) on kind, without GPUs: kind cluster, Argo CD, app-of-apps from platform/ for the local overlay, wait until all Applications are Synced/Healthy, print endpoints; a sample model `sim-llama-8b` served by the llm-d inference simulator; CI job `e2e-local` (up → smoke → down) required by `ci-gate`; Argo CD tracks the current branch or applies from the working tree (playbook §6, feature 003)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: How is the inference endpoint exposed locally before the gateway exists? → A: The simulator Service is a NodePort (30080) mapped by kind `extraPortMappings` to `127.0.0.1:30080`; feature 009 moves the same host port to the gateway. Argo CD's UI uses NodePort 30081 → `127.0.0.1:30081` (insecure HTTP, local only). (decided by agent: no port-forward processes to manage; works identically on laptops and CI)
+- Q: How is the app-of-apps parameterized with repository URL and revision? → A: The root Application renders a small Helm chart in `platform/bootstrap/` with `values-<profile>.yaml`; the CLI passes `repoURL` and `targetRevision` as Helm parameters, and each child Application points to `platform/<component>/overlays/<profile>`. (decided by agent: standard app-of-apps pattern; child paths stay plain Kustomize)
+- Q: Which revision does Argo CD track by default? → A: The current branch name and the `origin` remote URL (SSH converted to HTTPS); `--repo-url` and `--revision` override; CI passes the PR head repository and commit SHA. (decided by agent: matches "watches the current git branch"; exact SHA in CI makes runs reproducible)
+- Q: How does `--from-worktree` work? → A: Argo CD is still installed, but instead of the root Application the CLI renders each component overlay with `kubectl kustomize --enable-helm` and applies it with server-side apply, then waits for Deployments in the platform namespaces. (decided by agent: simplest path that supports unpushed changes and private forks)
+- Q: Which kind node image and Kubernetes version? → A: The kind v0.33.0 default `kindest/node:v1.37.0` pinned by digest in `infra/local/kind-config.yaml`; the local profile's `kubernetesVersion` is `1.37` and the CLI checks they match. (decided by agent: latest stable kind default)
+- Q: How does Argo CD wait for child Applications in sync waves? → A: The `argocd-cm` ConfigMap restores the Application health assessment (Lua health check for `argoproj.io/Application`), so waves wait for child health. (decided by agent: documented Argo CD pattern for app-of-apps ordering)
+- Q: How long does `up` wait? → A: `--timeout` default 10 minutes for the whole bring-up after cluster creation. (decided by agent: matches SC-002)
+- Q: Which Argo CD components run locally? → A: controller, repo-server, server, redis and applicationset; Dex and notifications are disabled. (decided by agent: smallest footprint for a 4-CPU/8-GB runner)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - One command brings up the local platform (Priority: P1)
