@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/hermeto/aibox/internal/gpu"
 	"github.com/hermeto/aibox/internal/models"
+	"github.com/hermeto/aibox/internal/observability"
 	"github.com/hermeto/aibox/internal/profile"
 	"github.com/hermeto/aibox/internal/serving"
 )
@@ -61,5 +64,42 @@ func newRenderCmd(app *App) *cobra.Command {
 	}
 	servingCmd.Flags().StringVar(&catalogPath, "catalog", "", "catalog file (default: models/catalog.yaml in the repository, or $AIBOX_CATALOG)")
 	cmd.AddCommand(servingCmd)
+
+	var format string
+	rulesCmd := &cobra.Command{
+		Use:     "rules",
+		Short:   "Render the Prometheus rules: canonical runtime series, live cost and alerts",
+		Example: "  aibox render rules --profile aws-bench\n  aibox render rules --profile local --format prometheus",
+		Args:    cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			if format != observability.FormatK8s && format != observability.FormatPrometheus {
+				return UsageError(fmt.Errorf("invalid --format %q (want %s or %s)", format, observability.FormatK8s, observability.FormatPrometheus))
+			}
+			p, err := profile.Load(app.Opts.Profile)
+			if err != nil {
+				return err
+			}
+			root, err := profile.RepoRoot()
+			if err != nil {
+				return err
+			}
+			c, err := models.Load(models.DefaultPath())
+			if err != nil {
+				return err
+			}
+			groups, err := observability.Build(root, p, c)
+			if err != nil {
+				return err
+			}
+			out, err := observability.Render(p, groups, format)
+			if err != nil {
+				return err
+			}
+			_, err = app.Out.Write(out)
+			return err
+		},
+	}
+	rulesCmd.Flags().StringVar(&format, "format", observability.FormatK8s, "k8s (PrometheusRule) or prometheus (rule file for promtool)")
+	cmd.AddCommand(rulesCmd)
 	return cmd
 }
