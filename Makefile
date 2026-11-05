@@ -14,6 +14,10 @@ YAMLLINT_VERSION          ?= 1.38.0
 MARKDOWNLINT_CLI2_VERSION ?= 0.24.0
 PRE_COMMIT_VERSION        ?= 4.7.0
 GORELEASER_VERSION        ?= v2.20.0
+KUBECONFORM_VERSION       ?= v0.8.0
+KUSTOMIZE_VERSION         ?= v5.8.3
+HELM_VERSION              ?= v4.3.1
+K8S_SCHEMA_VERSION        ?= 1.37.0
 
 BIN := $(CURDIR)/bin
 export PATH := $(BIN):$(PATH)
@@ -27,6 +31,9 @@ LDFLAGS := -X github.com/hermeto/aibox/internal/version.Version=$(VERSION) -X gi
 GOLANGCI_LINT := $(BIN)/golangci-lint
 ACTIONLINT    := $(BIN)/actionlint
 EC            := $(BIN)/editorconfig-checker
+KUBECONFORM   := $(BIN)/kubeconform
+KUSTOMIZE     := $(BIN)/kustomize
+HELM          := $(BIN)/helm
 SHELLCHECK    := $(BIN)/shellcheck
 YAMLLINT      := uvx yamllint==$(YAMLLINT_VERSION)
 MARKDOWNLINT  := npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION)
@@ -51,7 +58,7 @@ dev-setup: ## Check prerequisites, install pinned tools and pre-commit hooks
 		else uvx pre-commit==$(PRE_COMMIT_VERSION) install --install-hooks; fi
 
 .PHONY: tools
-tools: $(GOLANGCI_LINT) $(ACTIONLINT) $(EC) $(SHELLCHECK) ## Install pinned linters into ./bin
+tools: $(GOLANGCI_LINT) $(ACTIONLINT) $(EC) $(SHELLCHECK) $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Install pinned linters and renderers into ./bin
 
 $(GOLANGCI_LINT):
 	GOBIN=$(BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
@@ -59,6 +66,12 @@ $(ACTIONLINT):
 	GOBIN=$(BIN) go install github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION)
 $(EC):
 	GOBIN=$(BIN) go install github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker@$(EDITORCONFIG_CHECKER_VERSION)
+$(KUBECONFORM):
+	GOBIN=$(BIN) go install github.com/yannh/kubeconform/cmd/kubeconform@$(KUBECONFORM_VERSION)
+$(KUSTOMIZE):
+	GOBIN=$(BIN) go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+$(HELM):
+	GOBIN=$(BIN) go install helm.sh/helm/v4/cmd/helm@$(HELM_VERSION)
 $(SHELLCHECK):
 	uv venv --quiet --allow-existing $(BIN)/.shellcheck
 	uv pip install --quiet --python $(BIN)/.shellcheck shellcheck-py==$(SHELLCHECK_PY_VERSION)
@@ -96,8 +109,12 @@ doctor: build ## Check prerequisites: aibox doctor --profile $(PROFILE)
 
 ##@ Quality
 
+.PHONY: validate-manifests
+validate-manifests: $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Render platform/ (bootstrap chart + overlays) and validate with kubeconform
+	HELM=$(HELM) KUSTOMIZE=$(KUSTOMIZE) hack/validate-manifests.sh "$(KUBECONFORM)" "$(K8S_SCHEMA_VERSION)"
+
 .PHONY: lint
-lint: lint-go lint-actions lint-pins lint-shell lint-yaml lint-markdown lint-editorconfig ## Run every linter
+lint: lint-go lint-actions lint-pins lint-shell lint-yaml lint-markdown lint-editorconfig validate-manifests ## Run every linter
 
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT) ## Lint Go code

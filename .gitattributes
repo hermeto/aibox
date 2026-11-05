@@ -11,3 +11,4 @@
 go.sum linguist-generated=true
 uv.lock linguist-generated=true
 .terraform.lock.hcl linguist-generated=true
+hack/schemas/** linguist-generated=true
