@@ -46,6 +46,8 @@ unpushed changes. The Argo CD UI is at <http://127.0.0.1:30081> (user `admin`).
 bucket with Terraform/OpenTofu (`infra/terraform/aws`), then bootstraps Argo CD. **It costs
 money** — follow [docs/runbooks/aws-first-run.md](docs/runbooks/aws-first-run.md) (quotas,
 state bucket, first run, teardown) and always finish with `aibox down --profile aws-dev`.
+Cloud runs require a budget (`BUDGET_USD`) and tear themselves down when their TTL expires
+([cost guardrails](docs/runbooks/cost-guardrails.md)).
 
 ## The `aibox` CLI
 
