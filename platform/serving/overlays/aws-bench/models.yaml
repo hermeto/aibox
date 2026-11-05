@@ -454,3 +454,232 @@ spec:
     - effect: NoSchedule
       key: nvidia.com/gpu
       operator: Exists
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    aibox.dev/model: qwen2.5-72b-awq
+    app.kubernetes.io/part-of: aibox
+  name: qwen2-5-72b-awq-rr
+  namespace: aibox-serving
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    aibox.dev/model: qwen2.5-72b-awq
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  labels:
+    aibox.dev/model: qwen2.5-72b-awq
+    app.kubernetes.io/part-of: aibox
+  name: qwen2-5-72b-awq
+  namespace: aibox-serving
+spec:
+  endpoints:
+  - fqdn:
+      hostname: qwen2-5-72b-awq-rr.aibox-serving.svc.cluster.local
+      port: 8000
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  labels:
+    aibox.dev/model: qwen2.5-72b-awq
+    app.kubernetes.io/part-of: aibox
+  name: qwen2-5-72b-awq
+  namespace: aibox-serving
+spec:
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: qwen2-5-72b-awq
+  schema:
+    name: OpenAI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    aibox.dev/model: qwen3-32b-fp8
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-32b-fp8-rr
+  namespace: aibox-serving
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    aibox.dev/model: qwen3-32b-fp8
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  labels:
+    aibox.dev/model: qwen3-32b-fp8
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-32b-fp8
+  namespace: aibox-serving
+spec:
+  endpoints:
+  - fqdn:
+      hostname: qwen3-32b-fp8-rr.aibox-serving.svc.cluster.local
+      port: 8000
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  labels:
+    aibox.dev/model: qwen3-32b-fp8
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-32b-fp8
+  namespace: aibox-serving
+spec:
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: qwen3-32b-fp8
+  schema:
+    name: OpenAI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    aibox.dev/model: qwen3-8b
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-8b-rr
+  namespace: aibox-serving
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    aibox.dev/model: qwen3-8b
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  labels:
+    aibox.dev/model: qwen3-8b
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-8b
+  namespace: aibox-serving
+spec:
+  endpoints:
+  - fqdn:
+      hostname: qwen3-8b-rr.aibox-serving.svc.cluster.local
+      port: 8000
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  labels:
+    aibox.dev/model: qwen3-8b
+    app.kubernetes.io/part-of: aibox
+  name: qwen3-8b
+  namespace: aibox-serving
+spec:
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: qwen3-8b
+  schema:
+    name: OpenAI
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  labels:
+    app.kubernetes.io/part-of: aibox
+  name: aibox
+  namespace: aibox-serving
+spec:
+  llmRequestCosts:
+  - metadataKey: llm_total_token
+    type: TotalToken
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: aibox
+    namespace: aibox-gateway
+  rules:
+  - backendRefs:
+    - name: qwen2-5-72b-awq
+    matches:
+    - headers:
+      - name: x-ai-eg-model
+        type: Exact
+        value: qwen2.5-72b-awq
+    timeouts:
+      request: 600s
+  - backendRefs:
+    - name: qwen3-32b-fp8
+    matches:
+    - headers:
+      - name: x-ai-eg-model
+        type: Exact
+        value: qwen3-32b-fp8
+    timeouts:
+      request: 600s
+  - backendRefs:
+    - name: qwen3-8b
+    matches:
+    - headers:
+      - name: x-ai-eg-model
+        type: Exact
+        value: qwen3-8b
+    timeouts:
+      request: 600s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  labels:
+    app.kubernetes.io/part-of: aibox
+  name: rate-limits
+  namespace: aibox-gateway
+spec:
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-aibox-client
+            type: Distinct
+        limit:
+          requests: 600
+          unit: Minute
+      - clientSelectors:
+        - headers:
+          - name: x-aibox-client
+            type: Distinct
+        cost:
+          request:
+            from: Number
+            number: 0
+          response:
+            from: Metadata
+            metadata:
+              key: llm_total_token
+              namespace: io.envoy.ai_gateway
+        limit:
+          requests: 1000000
+          unit: Minute
+    type: Global
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: aibox

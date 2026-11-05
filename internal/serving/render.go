@@ -62,8 +62,11 @@ func Render(p *profile.Profile, c *models.Catalog) ([]byte, error) {
 		return nil, err
 	}
 	sort.Slice(sel, func(i, j int) bool { return sel[i].ID < sel[j].ID })
-	var objs []any
-	fetch := false
+	var (
+		objs   []any
+		served []*models.Model
+		fetch  bool
+	)
 	for i := range sel {
 		m := &sel[i]
 		if !m.Served() {
@@ -74,7 +77,15 @@ func Render(p *profile.Profile, c *models.Catalog) ([]byte, error) {
 			return nil, err
 		}
 		objs = append(objs, obj)
+		served = append(served, m)
 		fetch = fetch || m.LoadMethod == "nvme-cache"
+	}
+	// Gateway routing (feature 009): per-model backends, one route, the profile's rate limits.
+	for _, m := range served {
+		objs = append(objs, routing(m)...)
+	}
+	if len(served) > 0 {
+		objs = append(objs, route(served), rateLimits(p))
 	}
 	if fetch {
 		cm, err := fetchScripts()

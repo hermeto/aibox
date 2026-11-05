@@ -18,6 +18,11 @@ nodes:
         hostPort: 30081
         listenAddress: 127.0.0.1
         protocol: TCP
+      # Model server metrics (local profile; the gateway serves only the OpenAI API)
+      - containerPort: 30082
+        hostPort: 30082
+        listenAddress: 127.0.0.1
+        protocol: TCP
       # Grafana (feature 010)
       - containerPort: 30300
         hostPort: 30300
