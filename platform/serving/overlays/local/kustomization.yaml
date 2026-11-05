@@ -15,3 +15,18 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 30080
+  # Run on the fake GPU node (aibox.dev/gpu-class=gpu-sim, tainted nvidia.com/gpu).
+  - target:
+      kind: Deployment
+      name: sim-llama-8b
+    patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          aibox.dev/gpu-class: gpu-sim
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule

@@ -3,6 +3,8 @@ repoURL: https://github.com/hermeto/aibox.git
 targetRevision: main
 # Profile overlay rendered for every component: platform/<component>/overlays/<profile>
 profile: local
+# Set by `aibox up` for cloud profiles; tags Karpenter-launched instances.
+runId: ""
 # Argo CD namespace and project for child Applications.
 argocdNamespace: argocd
 project: default

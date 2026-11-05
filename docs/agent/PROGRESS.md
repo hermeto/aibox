@@ -7,9 +7,9 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 005-cost-guardrails |
-| Spec Kit phase | implement + converge done; waiting for CI on PR #7 |
-| Last commit | see `git log -1` on `005-cost-guardrails` |
+| Current feature | 006-gpu-node-provisioning |
+| Spec Kit phase | implement + converge done; waiting for CI on PR #8 |
+| Last commit | see `git log -1` on `006-gpu-node-provisioning` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
@@ -19,6 +19,7 @@
 3. [#5](https://github.com/hermeto/aibox/pull/5) `003-local-platform` → `002-cli-skeleton`
 4. [#6](https://github.com/hermeto/aibox/pull/6) `004-aws-infrastructure` → `003-local-platform`
 5. [#7](https://github.com/hermeto/aibox/pull/7) `005-cost-guardrails` → `004-aws-infrastructure`
+6. [#8](https://github.com/hermeto/aibox/pull/8) `006-gpu-node-provisioning` → `005-cost-guardrails`
 
 ## Blockers / `needs-human`
 
@@ -95,3 +96,7 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
 11. **Price table.** `data/pricing/aws-us-east-1.yaml` ships representative prices marked
     `verified: false` (no Price List API access from the container); `go run ./hack/pricing`
     refreshes them, and doctor warns until then.
+12. **Values only CI can resolve.** Registries blocked from the container (nvcr.io,
+    public.ecr.aws) are resolved in CI: `make check-image-digests` prints the digest to pin.
+    kubeconform's schema registry has no schema for the CustomResourceDefinition kind, so
+    `hack/gen-crd-schemas.sh` generates it from the Kubernetes OpenAPI document.

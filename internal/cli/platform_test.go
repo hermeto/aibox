@@ -30,7 +30,11 @@ func (fakeKube) Apply(context.Context, schema.GroupVersionResource, *unstructure
 	return nil
 }
 func (fakeKube) ListApplications(context.Context, string) ([]kube.AppStatus, error) {
-	return []kube.AppStatus{{Name: platform.RootAppName, Sync: "Synced", Health: "Healthy"}, {Name: "serving", Sync: "Synced", Health: "Healthy"}}, nil
+	var apps []kube.AppStatus
+	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu"} {
+		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
+	}
+	return apps, nil
 }
 func (fakeKube) NotReadyWorkloads(context.Context, string) ([]string, int, error) { return nil, 1, nil }
 func (fakeKube) PodSummary(context.Context, string) ([]string, error)             { return nil, nil }

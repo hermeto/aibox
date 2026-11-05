@@ -172,7 +172,7 @@ func (l *Local) Up(ctx context.Context, opts UpOptions) (*UpResult, error) {
 	}
 	if l.DryRun {
 		if res.Source != nil {
-			obj := RootApplication(*res.Source, l.Profile.Metadata.Name)
+			obj := RootApplication(*res.Source, l.Profile.Metadata.Name, "")
 			out, _ := yaml.Marshal(obj.Object)
 			l.logf("[dry-run] would apply:\n%s", out)
 		} else {

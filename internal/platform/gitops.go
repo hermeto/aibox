@@ -24,6 +24,8 @@ type gitops struct {
 	Log         io.Writer
 	ProfileName string
 	KubeContext string
+	// RunID tags Karpenter-launched instances (cloud profiles only).
+	RunID string
 	// Kubeconfig is an explicit kubeconfig file ("" = default loading rules).
 	Kubeconfig   string
 	PollInterval time.Duration
@@ -45,7 +47,7 @@ func (g *gitops) poll() time.Duration {
 // bootstrap applies the root Application and waits for every Application to be ready.
 func (g *gitops) bootstrap(ctx context.Context, k KubeAPI, src GitSource, comps []Component) error {
 	g.logf("Applying root Application %s", RootAppName)
-	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName)); err != nil {
+	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName, g.RunID)); err != nil {
 		return err
 	}
 	if err := g.waitApplications(ctx, k, comps); err != nil {
@@ -75,8 +77,16 @@ func (g *gitops) installArgoCD(ctx context.Context) error {
 	return nil
 }
 
-// RootApplication renders the app-of-apps root for a profile.
-func RootApplication(src GitSource, profileName string) *unstructured.Unstructured {
+// RootApplication renders the app-of-apps root for a profile. runID (cloud profiles) is
+// passed to the bootstrap chart to tag Karpenter-launched instances.
+func RootApplication(src GitSource, profileName, runID string) *unstructured.Unstructured {
+	params := []any{
+		map[string]any{"name": "repoURL", "value": src.RepoURL},
+		map[string]any{"name": "targetRevision", "value": src.Revision},
+	}
+	if runID != "" {
+		params = append(params, map[string]any{"name": "runId", "value": runID})
+	}
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "argoproj.io/v1alpha1",
 		"kind":       "Application",
@@ -94,10 +104,7 @@ func RootApplication(src GitSource, profileName string) *unstructured.Unstructur
 				"helm": map[string]any{
 					"releaseName": RootAppName,
 					"valueFiles":  []any{"values-" + profileName + ".yaml"},
-					"parameters": []any{
-						map[string]any{"name": "repoURL", "value": src.RepoURL},
-						map[string]any{"name": "targetRevision", "value": src.Revision},
-					},
+					"parameters":  params,
 				},
 			},
 			"destination": map[string]any{"server": "https://kubernetes.default.svc", "namespace": ArgoCDNamespace},

@@ -6,6 +6,7 @@
     "^LICENSE$",
     "^docs/agent/PLAYBOOK\\.md$",
     "/\\.terraform/",
-    "\\.terraform\\.lock\\.hcl$"
+    "\\.terraform\\.lock\\.hcl$",
+    "^hack/schemas/"
   ]
 }

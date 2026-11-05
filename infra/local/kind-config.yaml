@@ -27,3 +27,17 @@ nodes:
     image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
     labels:
       aibox.dev/role: worker
+  # Fake GPU node: exercises GPU tolerations/selectors without GPUs (feature 006).
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    labels:
+      aibox.dev/role: gpu
+      aibox.dev/gpu-class: gpu-sim
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          taints:
+            - key: nvidia.com/gpu
+              value: present
+              effect: NoSchedule

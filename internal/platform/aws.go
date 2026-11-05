@@ -459,7 +459,7 @@ func (a *AWS) Up(ctx context.Context, opts AWSUpOptions) (*AWSUpResult, error) {
 		return nil, err
 	}
 	res.Kubeconfig = kubeconfig
-	if err := a.bootstrapGitOps(ctx, kubeconfig, src, opts.Timeout); err != nil {
+	if err := a.bootstrapGitOps(ctx, kubeconfig, src, rs.RunID, opts.Timeout); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -474,14 +474,14 @@ func firstNonEmptyString(vals ...string) string {
 	return ""
 }
 
-func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSource, timeout time.Duration) error {
+func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSource, runID string, timeout time.Duration) error {
 	comps, err := LoadComponents(a.Root, a.Profile.Metadata.Name)
 	if err != nil {
 		return err
 	}
 	wctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	g := &gitops{Runner: a.Runner, Root: a.Root, Log: a.Log, ProfileName: a.Profile.Metadata.Name, KubeContext: a.KubeContext(), Kubeconfig: kubeconfig, PollInterval: a.PollInterval}
+	g := &gitops{Runner: a.Runner, Root: a.Root, Log: a.Log, ProfileName: a.Profile.Metadata.Name, KubeContext: a.KubeContext(), Kubeconfig: kubeconfig, RunID: runID, PollInterval: a.PollInterval}
 	if err := g.installArgoCD(wctx); err != nil {
 		return err
 	}

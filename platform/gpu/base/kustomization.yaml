@@ -1,0 +1,27 @@
+# GPU telemetry for Karpenter GPU nodes (Bottlerocket NVIDIA ships the driver and the device
+# plugin). Scraped by the observability stack (feature 010).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gpu-system
+helmCharts:
+  - name: dcgm-exporter
+    repo: https://nvidia.github.io/dcgm-exporter/helm-charts
+    version: 4.8.3
+    releaseName: dcgm-exporter
+    namespace: gpu-system
+    valuesInline:
+      image:
+        tag: 4.6.0-4.8.3-distroless@sha256:613ab03c11d442fd960ff515f547e9921537454a712d08160bc8f677f89f1c35
+      serviceMonitor:
+        enabled: false
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: aibox.dev/gpu-class
+                    operator: Exists

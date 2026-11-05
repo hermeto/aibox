@@ -38,7 +38,7 @@ SHELLCHECK    := $(BIN)/shellcheck
 YAMLLINT      := uvx yamllint==$(YAMLLINT_VERSION)
 MARKDOWNLINT  := npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION)
 
-SHELL_SCRIPTS = $(shell find . -name '*.sh' -not -path './.specify/*' -not -path './bin/*' -not -path './node_modules/*' -not -path '*/.terraform/*' | sort)
+SHELL_SCRIPTS = $(shell find . -type f -name '*.sh' -not -path './.specify/*' -not -path './bin/*' -not -path './node_modules/*' -not -path '*/.terraform/*' | sort)
 
 ##@ General
 
@@ -108,6 +108,14 @@ doctor: build ## Check prerequisites: aibox doctor --profile $(PROFILE)
 	$(AIBOX) doctor --profile $(PROFILE)
 
 ##@ Quality
+
+.PHONY: generate
+generate: ## Regenerate committed files derived from profiles (Karpenter node pools)
+	for p in aws-dev aws-bench; do go run ./cmd/aibox render nodepools --profile $$p > platform/gpu/overlays/$$p/nodepools.yaml; done
+
+.PHONY: check-image-digests
+check-image-digests: $(KUSTOMIZE) $(HELM) ## Fail on platform images not pinned by digest (needs Docker and network)
+	HELM=$(HELM) KUSTOMIZE=$(KUSTOMIZE) hack/check-image-digests.sh
 
 .PHONY: validate-manifests
 validate-manifests: $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Render platform/ (bootstrap chart + overlays) and validate with kubeconform
