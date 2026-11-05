@@ -1,0 +1,16 @@
+# Local inference endpoint: kind maps NodePort 30080 to 127.0.0.1:30080. It selects the pods
+# KServe runs for the local catalog model; feature 009 moves the endpoint to the gateway.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+spec:
+  type: NodePort
+  selector:
+    aibox.dev/model: sim-llama-8b
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080
+      protocol: TCP

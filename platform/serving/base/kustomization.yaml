@@ -1,7 +1,10 @@
+# Model servers: each overlay holds the LLMInferenceServices generated from the catalog
+# (`aibox render serving`, models.yaml) for its profile.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: aibox-serving
 resources:
-  - sim-llama-8b.yaml
+  - serviceaccount.yaml
 labels:
   - pairs:
       app.kubernetes.io/part-of: aibox
