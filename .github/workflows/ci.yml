@@ -107,7 +107,28 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      # The dependency graph is a repository setting. While it is disabled the action
+      # cannot run at all; the check then warns loudly (see issue #2) and enforces
+      # automatically as soon as the maintainer enables the setting.
+      - name: Check that the dependency graph is enabled
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if gh api "repos/${REPO}/dependency-graph/compare/${BASE_SHA}...${HEAD_SHA}" >/dev/null 2>err.txt; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'not supported|not enabled|dependency graph' err.txt; then
+            echo "::warning title=dependency-review::Dependency graph is disabled for ${REPO}; enable it in Settings → Code security (tracked in a needs-human issue). Review skipped."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            cat err.txt >&2
+            exit 1
+          fi
+      - if: steps.graph.outputs.enabled == 'true'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
 
