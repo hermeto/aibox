@@ -12,7 +12,6 @@ type stub struct {
 
 // notImplemented lists commands that later features deliver.
 var notImplemented = []stub{
-	{"models", "List and mirror catalog models", "007"},
 	{"bench", "Run a declared benchmark experiment", "013"},
 	{"report", "Generate the benchmark report from results", "014"},
 }

@@ -1,0 +1,106 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    aibox.dev/revision: 0123456789abcdef0123456789abcdef01234567
+    aibox.dev/source: huggingface.co/hf-internal-testing/tiny-random-LlamaForCausalLM
+    aibox.dev/target: s3://aibox-weights-aibox-dev-000000000000/models/tiny-random-llama/0123456789abcdef0123456789abcdef01234567/
+  labels:
+    aibox.dev/model: tiny-random-llama
+    app.kubernetes.io/component: mirror
+    app.kubernetes.io/name: model-sync
+    app.kubernetes.io/part-of: aibox
+  name: mirror-tiny-random-llama
+  namespace: aibox-models
+spec:
+  activeDeadlineSeconds: 3600
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        aibox.dev/model: tiny-random-llama
+        app.kubernetes.io/component: mirror
+        app.kubernetes.io/name: model-sync
+        app.kubernetes.io/part-of: aibox
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          mkdir -p "$HOME" "$HF_HOME" "$TMPDIR"
+          python -m pip install --quiet --require-hashes --only-binary=:all: --target /work/py -r /scripts/requirements.txt
+          PYTHONPATH=/work/py exec python /scripts/mirror.py mirror
+        env:
+        - name: BUCKET
+          value: aibox-weights-aibox-dev-000000000000
+        - name: PREFIX
+          value: models/tiny-random-llama/0123456789abcdef0123456789abcdef01234567/
+        - name: HF_REPO
+          value: hf-internal-testing/tiny-random-LlamaForCausalLM
+        - name: REVISION
+          value: 0123456789abcdef0123456789abcdef01234567
+        - name: AWS_REGION
+          value: us-east-1
+        - name: WORK_DIR
+          value: /work
+        - name: HOME
+          value: /work/home
+        - name: HF_HOME
+          value: /work/hf
+        - name: TMPDIR
+          value: /work/tmp
+        - name: HF_HUB_DISABLE_PROGRESS_BARS
+          value: "1"
+        - name: PYTHONDONTWRITEBYTECODE
+          value: "1"
+        - name: PIP_DISABLE_PIP_VERSION_CHECK
+          value: "1"
+        - name: PIP_NO_CACHE_DIR
+          value: "1"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: hf-token
+              optional: true
+        image: python:3.14.10-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966
+        name: mirror
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            ephemeral-storage: 1Gi
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /work
+          name: work
+        - mountPath: /scripts
+          name: scripts
+          readOnly: true
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: model-sync
+      volumes:
+      - emptyDir:
+          sizeLimit: 32Gi
+        name: work
+      - configMap:
+          name: model-sync-scripts
+        name: scripts
+  ttlSecondsAfterFinished: 86400

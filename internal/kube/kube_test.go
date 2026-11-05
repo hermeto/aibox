@@ -81,3 +81,29 @@ func TestPodSummary(t *testing.T) {
 		t.Fatalf("%v %v", lines, err)
 	}
 }
+
+func TestJobStatusFrom(t *testing.T) {
+	job := &unstructured.Unstructured{Object: map[string]any{"status": map[string]any{"conditions": []any{
+		map[string]any{"type": "Failed", "status": "True", "message": "BackoffLimitExceeded"},
+		map[string]any{"type": "Complete", "status": "False"},
+	}}}}
+	pod := func(at, msg string) unstructured.Unstructured {
+		return unstructured.Unstructured{Object: map[string]any{"status": map[string]any{"containerStatuses": []any{
+			map[string]any{"state": map[string]any{"terminated": map[string]any{"finishedAt": at, "message": msg}}},
+		}}}}
+	}
+	st := JobStatusFrom(job, nil)
+	if !st.Found || !st.Failed || st.Succeeded || st.Message != "BackoffLimitExceeded" {
+		t.Fatalf("%+v", st)
+	}
+	st = JobStatusFrom(job, []unstructured.Unstructured{pod("2026-11-05T10:00:00Z", "first try"), pod("2026-11-05T10:05:00Z", "gated: accept the license\n")})
+	if st.Message != "gated: accept the license" {
+		t.Fatalf("latest termination message wins: %+v", st)
+	}
+	done := &unstructured.Unstructured{Object: map[string]any{"status": map[string]any{"conditions": []any{
+		map[string]any{"type": "Complete", "status": "True"},
+	}}}}
+	if st := JobStatusFrom(done, []unstructured.Unstructured{pod("2026-11-05T10:00:00Z", "synced: 3 files")}); !st.Succeeded || st.Message != "synced: 3 files" {
+		t.Fatalf("%+v", st)
+	}
+}

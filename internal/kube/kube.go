@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,6 +29,8 @@ var (
 	Namespaces   = schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}
 	Pods         = schema.GroupVersionResource{Version: "v1", Resource: "pods"}
 	Events       = schema.GroupVersionResource{Version: "v1", Resource: "events"}
+	Jobs         = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
+	ConfigMaps   = schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
 )
 
 // Client is a thin wrapper over the dynamic client.
@@ -208,4 +211,75 @@ func (c *Client) PodSummary(ctx context.Context, ns string) ([]string, error) {
 		out = append(out, line)
 	}
 	return out, nil
+}
+
+// JobState summarizes a batch/v1 Job.
+type JobState struct {
+	Found     bool
+	Succeeded bool
+	Failed    bool
+	// Message is the termination message of the Job's most recent finished container
+	// (scripts write their result there; on errors Kubernetes falls back to the log tail),
+	// else the reason of the Failed condition.
+	Message string
+}
+
+// JobStatusFrom derives a JobState from a Job and its pods.
+func JobStatusFrom(job *unstructured.Unstructured, pods []unstructured.Unstructured) JobState {
+	st := JobState{Found: true}
+	conds, _, _ := unstructured.NestedSlice(job.Object, "status", "conditions")
+	for _, c := range conds {
+		m, _ := c.(map[string]any)
+		if m["status"] != "True" {
+			continue
+		}
+		switch m["type"] {
+		case "Complete":
+			st.Succeeded = true
+		case "Failed":
+			st.Failed = true
+			if msg, _ := m["message"].(string); msg != "" {
+				st.Message = msg
+			}
+		}
+	}
+	var latest string
+	for i := range pods {
+		sts, _, _ := unstructured.NestedSlice(pods[i].Object, "status", "containerStatuses")
+		for _, s := range sts {
+			m, _ := s.(map[string]any)
+			msg, _, _ := unstructured.NestedString(m, "state", "terminated", "message")
+			at, _, _ := unstructured.NestedString(m, "state", "terminated", "finishedAt")
+			if msg = strings.TrimSpace(msg); msg != "" && at >= latest {
+				latest, st.Message = at, msg
+			}
+		}
+	}
+	return st
+}
+
+// JobStatus reads a Job and the termination messages of its pods.
+func (c *Client) JobStatus(ctx context.Context, ns, name string) (JobState, error) {
+	job, err := c.Dynamic.Resource(Jobs).Namespace(ns).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return JobState{}, nil
+	}
+	if err != nil {
+		return JobState{}, err
+	}
+	pods, err := c.Dynamic.Resource(Pods).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: "batch.kubernetes.io/controller-uid=" + string(job.GetUID())})
+	if err != nil {
+		return JobState{}, err
+	}
+	return JobStatusFrom(job, pods.Items), nil
+}
+
+// DeleteJob deletes a Job and, in the background, its pods.
+func (c *Client) DeleteJob(ctx context.Context, ns, name string) error {
+	policy := metav1.DeletePropagationBackground
+	err := c.Dynamic.Resource(Jobs).Namespace(ns).Delete(ctx, name, metav1.DeleteOptions{PropagationPolicy: &policy})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }

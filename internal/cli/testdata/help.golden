@@ -10,7 +10,7 @@ Available Commands:
   doctor      Check prerequisites for a profile (tools, container runtime, AWS quotas)
   down        Tear down the platform for a profile and check for orphans
   help        Help about any command
-  models      List and mirror catalog models
+  models      List catalog models and mirror their weights
   render      Render generated platform manifests from a profile
   report      Generate the benchmark report from results
   smoke       Send one request per model and check metrics, traces and dashboards
