@@ -140,6 +140,12 @@ func convertOpenAPI(path, kind, out string) error {
 			}
 			strict(schema)
 			visit(schema)
+			// The API server ignores status on create; controller-gen emits it with null fields.
+			if props, ok := schema["properties"].(map[string]any); ok {
+				if _, ok := props["status"]; ok {
+					props["status"] = map[string]any{}
+				}
+			}
 			schema["definitions"] = defs
 			group, _ := gvk["group"].(string)
 			version, _ := gvk["version"].(string)
