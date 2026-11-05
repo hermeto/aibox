@@ -70,7 +70,11 @@ func gitFake() *exec.Fake {
 }
 
 func readyApps() []kube.AppStatus {
-	return []kube.AppStatus{{Name: RootAppName, Sync: "Synced", Health: "Healthy"}, {Name: "serving", Sync: "Synced", Health: "Healthy"}}
+	var apps []kube.AppStatus
+	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu"} {
+		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
+	}
+	return apps
 }
 
 func newLocal(t *testing.T, r exec.Runner, k *fakeKube) (*Local, *bytes.Buffer) {

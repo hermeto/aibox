@@ -1,0 +1,26 @@
+# Karpenter for profile aws-bench (chart 1.15.1). Settings come from infra/terraform/aws:
+# cluster name and the interruption queue created by the eks karpenter submodule.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: karpenter
+helmCharts:
+  - name: karpenter
+    repo: oci://public.ecr.aws/karpenter
+    version: 1.15.1
+    releaseName: karpenter
+    namespace: karpenter
+    includeCRDs: true
+    valuesInline:
+      serviceAccount:
+        name: karpenter
+      settings:
+        clusterName: aibox-bench
+        interruptionQueue: Karpenter-aibox-bench
+        featureGates:
+          reservedCapacity: true
+      controller:
+        image:
+          tag: 1.15.1
+          digest: sha256:8314ff9c6bca66372031e80532c18025bbe6d34eae2443849d9ff02796fb09c8
+      nodeSelector:
+        aibox.dev/role: system

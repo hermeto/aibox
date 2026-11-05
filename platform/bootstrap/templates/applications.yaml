@@ -18,6 +18,17 @@ spec:
     repoURL: {{ $.Values.repoURL }}
     targetRevision: {{ $.Values.targetRevision }}
     path: {{ .path | default (printf "platform/%s/overlays/%s" .name $.Values.profile) }}
+    {{- if and $.Values.runId .tagNodeClassesWithRunId }}
+    kustomize:
+      patches:
+        - target:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+          patch: |-
+            - op: add
+              path: /spec/tags/run-id
+              value: {{ $.Values.runId | quote }}
+    {{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: {{ .namespace }}
