@@ -58,6 +58,7 @@ Setup → Foundational → US1 → US2 → US3 → US4 → Polish.
 ## Convergence log
 
 `/speckit-converge` pass 1 (2026-11-05): 2 findings, both fixed in this pass.
+
 - F1 `contradicts` (HIGH, research R1): git module sources did not make local validation
   possible (the EKS module pulls `terraform-aws-modules/kms` from the registry) → switched to
   registry sources with exact versions; local checks use a throwaway registry shim.
