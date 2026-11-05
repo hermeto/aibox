@@ -120,7 +120,7 @@ or on AWS EKS), runs reproducible benchmarks and reports cost per 1M tokens and 
 	pf.BoolVar(&app.Opts.DryRun, "dry-run", false, "print external commands instead of running them")
 	pf.BoolVarP(&app.Opts.Yes, "yes", "y", false, "assume yes for confirmations")
 
-	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app), newCostCmd(app), newTTLCmd(app))
+	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app), newCostCmd(app), newTTLCmd(app), newRenderCmd(app))
 	for _, c := range notImplemented {
 		root.AddCommand(newNotImplementedCmd(c))
 	}
