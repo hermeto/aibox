@@ -1,0 +1,101 @@
+# yaml-language-server: $schema=../schemas/catalog.schema.json
+# AIBox model catalog — every model AIBox serves, pinned by revision (commit SHA).
+# Revisions are commits (pinned 2026-11-05 from the head of main); a new entry may use 40 zeros
+# as a placeholder, and CI (make check-model-revisions) prints the commit to pin.
+apiVersion: aibox.dev/v1alpha1
+kind: ModelCatalog
+models:
+  - id: qwen3-8b
+    description: Baseline 8B model (Apache-2.0).
+    enabled: true
+    profiles: [aws-dev, aws-bench]
+    source: {type: huggingface, repo: Qwen/Qwen3-8B, revision: "b968826d9c46dd6066d109eabc6255188de91218"}
+    license: apache-2.0
+    gated: false
+    quantization: bf16
+    tensorParallelSize: 1
+    maxModelLen: 8192
+    minGPUClass: gpu-l4
+    runtime: vllm
+    runtimeFlags: {enablePrefixCaching: true, enableChunkedPrefill: true, gpuMemoryUtilization: 0.90, maxNumSeqs: 64, kvCacheDtype: auto}
+    loadMethod: s3-stream
+    slo: {ttftP99Ms: 1000, itlP99Ms: 100}
+
+  - id: llama-3.1-8b-instruct
+    description: Meta Llama 3.1 8B Instruct — accept the license on Hugging Face before enabling.
+    enabled: false
+    profiles: [aws-dev, aws-bench]
+    source: {type: huggingface, repo: meta-llama/Llama-3.1-8B-Instruct, revision: "0e9e39f249a16976918f6564b8830bc894c89659"}
+    license: llama3.1
+    gated: true
+    quantization: bf16
+    tensorParallelSize: 1
+    maxModelLen: 8192
+    minGPUClass: gpu-l4
+    runtime: vllm
+    runtimeFlags: {enablePrefixCaching: true, enableChunkedPrefill: true, gpuMemoryUtilization: 0.90, maxNumSeqs: 64, kvCacheDtype: auto}
+    loadMethod: s3-stream
+    slo: {ttftP99Ms: 1000, itlP99Ms: 100}
+
+  - id: qwen3-32b-fp8
+    description: 32B model, FP8 weights, tensor parallel 2.
+    enabled: true
+    profiles: [aws-bench]
+    source: {type: huggingface, repo: Qwen/Qwen3-32B-FP8, revision: "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"}
+    license: apache-2.0
+    gated: false
+    quantization: fp8
+    tensorParallelSize: 2
+    maxModelLen: 8192
+    minGPUClass: gpu-l4
+    runtime: vllm
+    runtimeFlags: {enablePrefixCaching: true, enableChunkedPrefill: true, gpuMemoryUtilization: 0.92, maxNumSeqs: 64, kvCacheDtype: auto}
+    loadMethod: s3-stream
+    slo: {ttftP99Ms: 2000, itlP99Ms: 120}
+
+  - id: qwen2.5-72b-awq
+    description: 70B-class model, AWQ 4-bit, tensor parallel 4 (multi-GPU test).
+    enabled: true
+    profiles: [aws-bench]
+    source: {type: huggingface, repo: Qwen/Qwen2.5-72B-Instruct-AWQ, revision: "698703eae6604af048a3d2f509995dc302088217"}
+    license: qwen
+    gated: false
+    quantization: awq
+    tensorParallelSize: 4
+    maxModelLen: 8192
+    minGPUClass: gpu-l4
+    runtime: vllm
+    runtimeFlags: {enablePrefixCaching: true, enableChunkedPrefill: true, gpuMemoryUtilization: 0.92, maxNumSeqs: 32, kvCacheDtype: auto}
+    loadMethod: s3-stream
+    slo: {ttftP99Ms: 3000, itlP99Ms: 150}
+
+  - id: sim-llama-8b
+    description: llm-d inference simulator posing as an 8B model (local profile, no GPU).
+    enabled: true
+    profiles: [local]
+    source: {type: simulator}
+    license: apache-2.0
+    gated: false
+    quantization: none
+    tensorParallelSize: 1
+    maxModelLen: 8192
+    minGPUClass: gpu-sim
+    runtime: simulator
+    loadMethod: none
+    slo: {ttftP99Ms: 1000, itlP99Ms: 100}
+
+  - id: tiny-random-llama
+    description: A few-MB random Llama used to test weight mirroring and loading in CI.
+    enabled: true
+    serve: false
+    profiles: [local]
+    source: {type: huggingface, repo: hf-internal-testing/tiny-random-LlamaForCausalLM, revision: "9fb191250dd56d0ba7ec9785a025ed29c03d5998"}
+    license: mit
+    gated: false
+    quantization: none
+    tensorParallelSize: 1
+    maxModelLen: 512
+    minGPUClass: none
+    runtime: vllm
+    loadMethod: s3-stream
+    slo: {ttftP99Ms: 1000, itlP99Ms: 100}

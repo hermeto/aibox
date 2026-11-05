@@ -539,6 +539,30 @@ func (a *AWS) writeKubeconfig(outputsJSON string) (string, error) {
 	return path, os.WriteFile(path, cfg, 0o600)
 }
 
+// ActiveCluster returns the kubeconfig, context and Terraform outputs of the active run.
+func (a *AWS) ActiveCluster() (kubeconfig, kubeContext string, outputs map[string]any, err error) {
+	rs, err := a.loadRun()
+	if err != nil {
+		return "", "", nil, err
+	}
+	if rs == nil {
+		return "", "", nil, ErrNoActiveRun
+	}
+	data, err := os.ReadFile(filepath.Join(a.stateDir(), "outputs.json")) //nolint:gosec // generated file
+	if err != nil {
+		return "", "", nil, fmt.Errorf("terraform outputs of run %s: %w", rs.RunID, err)
+	}
+	var outs map[string]tfOutput
+	if err := json.Unmarshal(data, &outs); err != nil {
+		return "", "", nil, fmt.Errorf("parse terraform outputs: %w", err)
+	}
+	outputs = map[string]any{}
+	for k, v := range outs {
+		outputs[k] = v.Value
+	}
+	return filepath.Join(a.stateDir(), "kubeconfig"), a.KubeContext(), outputs, nil
+}
+
 // DownResult reports a teardown.
 type DownResult struct {
 	Profile   string             `json:"profile"`

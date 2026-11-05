@@ -71,7 +71,7 @@ func gitFake() *exec.Fake {
 
 func readyApps() []kube.AppStatus {
 	var apps []kube.AppStatus
-	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu"} {
+	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu", "secrets", "models"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps
@@ -233,7 +233,7 @@ func TestDown(t *testing.T) {
 func TestComponentsAndVersionCheck(t *testing.T) {
 	l, _ := newLocal(t, exec.NewFake(), nil)
 	comps, err := l.Components()
-	if err != nil || len(comps) == 0 || comps[0].Path != "platform/serving/overlays/local" {
+	if err != nil || len(comps) != 3 || comps[0].Name != "secrets" || comps[2].Path != "platform/serving/overlays/local" {
 		t.Fatalf("%v %v", comps, err)
 	}
 	cfg := filepath.Join(repoRoot(t), "infra", "local", "kind-config.yaml")

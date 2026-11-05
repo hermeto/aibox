@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/hermeto/aibox/internal/doctor"
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
+	"github.com/hermeto/aibox/internal/models"
 	"github.com/hermeto/aibox/internal/output"
 	"github.com/hermeto/aibox/internal/platform"
 )
@@ -48,6 +50,10 @@ type App struct {
 	EgressIP func(ctx context.Context) (string, error)
 	// CostClients returns read-only EC2/ELBv2 clients (nil means the AWS SDK).
 	CostClients func(ctx context.Context, region string) (cost.EC2API, cost.ELBAPI, error)
+	// Jobs connects the model sync to a cluster (nil means client-go).
+	Jobs func(kubeconfig, kubeContext string) (models.JobAPI, error)
+	// PollInterval overrides wait loops (tests).
+	PollInterval time.Duration
 
 	Opts   Options
 	Format output.Format
@@ -80,6 +86,8 @@ func (a *App) getenv(k string) string {
 	}
 	return os.Getenv(k)
 }
+
+func (a *App) pollInterval() time.Duration { return a.PollInterval }
 
 // print renders v in the selected output format.
 func (a *App) print(v any) error { return output.Print(a.Out, a.Format, v) }
@@ -120,7 +128,7 @@ or on AWS EKS), runs reproducible benchmarks and reports cost per 1M tokens and 
 	pf.BoolVar(&app.Opts.DryRun, "dry-run", false, "print external commands instead of running them")
 	pf.BoolVarP(&app.Opts.Yes, "yes", "y", false, "assume yes for confirmations")
 
-	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app), newCostCmd(app), newTTLCmd(app), newRenderCmd(app))
+	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app), newCostCmd(app), newTTLCmd(app), newRenderCmd(app), newModelsCmd(app))
 	for _, c := range notImplemented {
 		root.AddCommand(newNotImplementedCmd(c))
 	}

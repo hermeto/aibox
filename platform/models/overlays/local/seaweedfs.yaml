@@ -1,0 +1,88 @@
+# Local S3-compatible object store for model weights (SeaweedFS, single `weed server -s3`).
+# It runs without S3 identities, so in-cluster clients send anonymous requests; it is
+# reachable only inside the kind cluster. Data lives in an emptyDir: weights are re-mirrored
+# after a cluster rebuild.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/part-of: aibox
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/part-of: aibox
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
+          command: ["/usr/bin/weed"]
+          args:
+            - -logtostderr=true
+            - server
+            - -dir=/data
+            - -ip.bind=0.0.0.0
+            - -volume.max=0
+            - -master.volumeSizeLimitMB=256
+            - -s3
+            - -s3.port=8333
+          ports:
+            - name: s3
+              containerPort: 8333
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/part-of: aibox
+spec:
+  selector:
+    app.kubernetes.io/name: seaweedfs
+  ports:
+    - name: s3
+      port: 8333
+      targetPort: s3

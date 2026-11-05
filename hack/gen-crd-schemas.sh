@@ -11,6 +11,8 @@ crds=(
   "argocd-application|https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/crds/application-crd.yaml"
   "karpenter-nodepools|https://raw.githubusercontent.com/aws/karpenter-provider-aws/v1.15.1/pkg/apis/crds/karpenter.sh_nodepools.yaml"
   "karpenter-ec2nodeclasses|https://raw.githubusercontent.com/aws/karpenter-provider-aws/v1.15.1/pkg/apis/crds/karpenter.k8s.aws_ec2nodeclasses.yaml"
+  "eso-clustersecretstores|https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.14.0/config/crds/bases/external-secrets.io_clustersecretstores.yaml"
+  "eso-externalsecrets|https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.14.0/config/crds/bases/external-secrets.io_externalsecrets.yaml"
 )
 
 mkdir -p hack/crds

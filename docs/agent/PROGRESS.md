@@ -7,9 +7,9 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 006-gpu-node-provisioning |
-| Spec Kit phase | implement + converge done; waiting for CI on PR #8 |
-| Last commit | see `git log -1` on `006-gpu-node-provisioning` |
+| Current feature | 007-model-catalog |
+| Spec Kit phase | implement + converge done; PR #9 ready; next: 008 |
+| Last commit | see `git log -1` on `007-model-catalog` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
@@ -20,6 +20,7 @@
 4. [#6](https://github.com/hermeto/aibox/pull/6) `004-aws-infrastructure` → `003-local-platform`
 5. [#7](https://github.com/hermeto/aibox/pull/7) `005-cost-guardrails` → `004-aws-infrastructure`
 6. [#8](https://github.com/hermeto/aibox/pull/8) `006-gpu-node-provisioning` → `005-cost-guardrails`
+7. [#9](https://github.com/hermeto/aibox/pull/9) `007-model-catalog` → `006-gpu-node-provisioning`
 
 ## Blockers / `needs-human`
 
@@ -100,3 +101,7 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
     public.ecr.aws) are resolved in CI: `make check-image-digests` prints the digest to pin.
     kubeconform's schema registry has no schema for the CustomResourceDefinition kind, so
     `hack/gen-crd-schemas.sh` generates it from the Kubernetes OpenAPI document.
+13. **Hugging Face revisions.** huggingface.co is unreachable from the container, so new
+    catalog entries use a placeholder revision and `make check-model-revisions`
+    (`hack/hfcheck`) prints the commit to pin in CI; it also fails when a pinned revision
+    disappears.

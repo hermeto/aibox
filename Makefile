@@ -117,6 +117,10 @@ generate: ## Regenerate committed files derived from profiles (Karpenter node po
 check-image-digests: $(KUSTOMIZE) $(HELM) ## Fail on platform images not pinned by digest (needs Docker and network)
 	HELM=$(HELM) KUSTOMIZE=$(KUSTOMIZE) hack/check-image-digests.sh
 
+.PHONY: check-model-revisions
+check-model-revisions: ## Verify catalog revisions on Hugging Face; print the commit to pin for placeholders (needs network)
+	go run ./hack/hfcheck
+
 .PHONY: validate-manifests
 validate-manifests: $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Render platform/ (bootstrap chart + overlays) and validate with kubeconform
 	HELM=$(HELM) KUSTOMIZE=$(KUSTOMIZE) hack/validate-manifests.sh "$(KUBECONFORM)" "$(K8S_SCHEMA_VERSION)"

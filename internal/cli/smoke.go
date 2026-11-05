@@ -8,13 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hermeto/aibox/internal/models"
 	"github.com/hermeto/aibox/internal/platform"
 	"github.com/hermeto/aibox/internal/profile"
 	"github.com/hermeto/aibox/internal/smoke"
 )
-
-// localModels are the models the local profile serves (feature 007 moves this to the catalog).
-var localModels = []string{"sim-llama-8b"}
 
 type downResult struct {
 	Profile string `json:"profile"`
@@ -56,7 +54,9 @@ and checks that the runtime metrics AIBox depends on are exposed. Exit code 1 on
 				o.MetricsURL = strings.TrimSuffix(o.BaseURL, "/v1") + "/metrics"
 			}
 			if len(o.ExpectModels) == 0 {
-				o.ExpectModels = localModels
+				if o.ExpectModels, err = servedModels(p.Metadata.Name); err != nil {
+					return err
+				}
 			}
 			report := smoke.Run(cmd.Context(), o)
 			if err := app.print(report); err != nil {
@@ -74,4 +74,23 @@ and checks that the runtime metrics AIBox depends on are exposed. Exit code 1 on
 	f.StringSliceVar(&o.Models, "model", nil, "model(s) to test (default: every listed model)")
 	f.StringSliceVar(&o.ExpectModels, "expect-model", nil, "model(s) that must be listed (default: the profile's models)")
 	return cmd
+}
+
+// servedModels lists the catalog models the profile serves.
+func servedModels(profileName string) ([]string, error) {
+	c, err := models.Load(models.DefaultPath())
+	if err != nil {
+		return nil, err
+	}
+	sel, err := c.Select(profileName, false, nil)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for i := range sel {
+		if sel[i].Served() {
+			ids = append(ids, sel[i].ID)
+		}
+	}
+	return ids, nil
 }

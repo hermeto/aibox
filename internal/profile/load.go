@@ -9,12 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"sigs.k8s.io/yaml"
 
 	"github.com/hermeto/aibox/schemas"
@@ -33,10 +29,7 @@ type ValidationError struct {
 }
 
 // Issue is one schema violation.
-type Issue struct {
-	Field  string `json:"field"`
-	Reason string `json:"reason"`
-}
+type Issue = schemas.Issue
 
 func (e *ValidationError) Error() string {
 	var b strings.Builder
@@ -45,35 +38,6 @@ func (e *ValidationError) Error() string {
 		fmt.Fprintf(&b, "\n  %s: %s", i.Field, i.Reason)
 	}
 	return b.String()
-}
-
-var (
-	schemaOnce sync.Once
-	compiled   *jsonschema.Schema
-	errCompile error
-)
-
-func profileSchema() (*jsonschema.Schema, error) {
-	schemaOnce.Do(func() {
-		raw, err := schemas.FS.ReadFile(schemas.Profile)
-		if err != nil {
-			errCompile = err
-			return
-		}
-		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
-		if err != nil {
-			errCompile = err
-			return
-		}
-		c := jsonschema.NewCompiler()
-		c.AssertFormat()
-		if err := c.AddResource(schemas.Profile, doc); err != nil {
-			errCompile = err
-			return
-		}
-		compiled, errCompile = c.Compile(schemas.Profile)
-	})
-	return compiled, errCompile
 }
 
 // Resolve maps a --profile value to a file path. Values containing a path separator or
@@ -187,53 +151,14 @@ func Parse(path string, data []byte) (*Profile, error) {
 
 // Validate checks JSON bytes against the profile schema.
 func Validate(path string, jsonData []byte) error {
-	sch, err := profileSchema()
+	issues, err := schemas.Validate(schemas.Profile, jsonData)
 	if err != nil {
-		return fmt.Errorf("compile profile schema: %w", err)
-	}
-	inst, err := jsonschema.UnmarshalJSON(bytes.NewReader(jsonData))
-	if err != nil {
-		return &ValidationError{Path: path, Issues: []Issue{{Field: "/", Reason: err.Error()}}}
-	}
-	if err := sch.Validate(inst); err != nil {
-		var ve *jsonschema.ValidationError
-		if errors.As(err, &ve) {
-			return &ValidationError{Path: path, Issues: flatten(ve)}
-		}
 		return err
 	}
-	return nil
-}
-
-func flatten(ve *jsonschema.ValidationError) []Issue {
-	printer := message.NewPrinter(language.English)
-	seen := map[string]bool{}
-	var issues []Issue
-	var walk func(e *jsonschema.ValidationError)
-	walk = func(e *jsonschema.ValidationError) {
-		if len(e.Causes) > 0 {
-			for _, c := range e.Causes {
-				walk(c)
-			}
-			return
-		}
-		field := "/" + strings.Join(e.InstanceLocation, "/")
-		reason := e.ErrorKind.LocalizedString(printer)
-		key := field + "\x00" + reason
-		if seen[key] {
-			return
-		}
-		seen[key] = true
-		issues = append(issues, Issue{Field: field, Reason: reason})
+	if len(issues) > 0 {
+		return &ValidationError{Path: path, Issues: issues}
 	}
-	walk(ve)
-	sort.Slice(issues, func(i, j int) bool {
-		if issues[i].Field != issues[j].Field {
-			return issues[i].Field < issues[j].Field
-		}
-		return issues[i].Reason < issues[j].Reason
-	})
-	return issues
+	return nil
 }
 
 func semanticChecks(p *Profile) error {
