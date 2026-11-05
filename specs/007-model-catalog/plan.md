@@ -16,8 +16,9 @@ the Kubernetes API. Local: SeaweedFS 4.52 in `platform/models` (local overlay) a
 **Language/Version**: Go 1.27.3.
 
 **Primary Dependencies**: SeaweedFS `chrislusf/seaweedfs:4.52@sha256:57877e32…`,
-`peakcom/s5cmd:v2.3.0@sha256:2ff939e2…`, `python:3.15-slim@sha256:8c13a3f3…` +
-`huggingface_hub==2.4.0`, `busybox:1.37@sha256:a7dbc319…`, External Secrets chart 2.14.0.
+`python:3.14.10-slim@sha256:930e1abb…` + hash-locked `huggingface_hub==2.4.0` and
+`boto3==1.43.124` (`internal/models/scripts/requirements.txt`), External Secrets chart 2.14.0
+(`ghcr.io/external-secrets/external-secrets:v2.14.0@sha256:10608eb5…`).
 
 **Testing**: schema/fixture tests; Job rendering golden tests; sync orchestration with a fake
 Kubernetes API; e2e sync in CI.
@@ -43,7 +44,7 @@ Kubernetes API; e2e sync in CI.
 
 ```text
 models/catalog.yaml, schemas/catalog.schema.json
-internal/models/{catalog.go,jobs.go,sync.go} (+ tests, testdata)
+internal/models/{catalog.go,jobs.go,sync.go,scripts/} (+ tests, testdata)
 internal/cli/models.go
 internal/kube/kube.go            # job status helper
 platform/models/{base,overlays/local}   # SeaweedFS (local only)

@@ -34,6 +34,7 @@ make build
 curl -s http://127.0.0.1:30080/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"model":"sim-llama-8b","messages":[{"role":"user","content":"Hello"}]}'
 ./bin/aibox smoke --profile local       # models, one completion per model, metrics
+./bin/aibox models sync --profile local --model tiny-random-llama  # mirror + verify weights
 ./bin/aibox down --profile local        # deletes the cluster
 ```
 
@@ -48,6 +49,14 @@ money** — follow [docs/runbooks/aws-first-run.md](docs/runbooks/aws-first-run.
 state bucket, first run, teardown) and always finish with `aibox down --profile aws-dev`.
 Cloud runs require a budget (`BUDGET_USD`) and tear themselves down when their TTL expires
 ([cost guardrails](docs/runbooks/cost-guardrails.md)).
+
+## Models
+
+`models/catalog.yaml` declares every model AIBox serves, pinned to a Hugging Face commit, with
+its runtime, GPU class, tensor parallelism, loading method and SLO targets
+(`aibox models list`). `aibox models sync` mirrors the weights into the environment's object
+storage with in-cluster Jobs and verifies every checksum; see
+[docs/runbooks/model-weights.md](docs/runbooks/model-weights.md).
 
 ## The `aibox` CLI
 
