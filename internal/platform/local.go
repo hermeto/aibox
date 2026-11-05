@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -108,6 +107,15 @@ func (r *UpResult) RenderText(w io.Writer) error {
 	return err
 }
 
+func (l *Local) gitops() *gitops {
+	return &gitops{Runner: l.Runner, Root: l.Root, Log: l.Log, ProfileName: l.Profile.Metadata.Name, KubeContext: l.KubeContext(), PollInterval: l.PollInterval}
+}
+
+// Components reads the app-of-apps components for the profile, sorted by sync wave.
+func (l *Local) Components() ([]Component, error) {
+	return LoadComponents(l.Root, l.Profile.Metadata.Name)
+}
+
 // KubeContext is the kubeconfig context kind creates for the profile's cluster.
 func (l *Local) KubeContext() string { return "kind-" + l.Profile.Spec.Cluster.Name }
 
@@ -115,13 +123,6 @@ func (l *Local) logf(format string, args ...any) {
 	if l.Log != nil {
 		_, _ = fmt.Fprintf(l.Log, format+"\n", args...)
 	}
-}
-
-func (l *Local) poll() time.Duration {
-	if l.PollInterval > 0 {
-		return l.PollInterval
-	}
-	return 5 * time.Second
 }
 
 // Up brings the platform up. It is idempotent.
@@ -165,7 +166,8 @@ func (l *Local) Up(ctx context.Context, opts UpOptions) (*UpResult, error) {
 	wctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 
-	if err := l.installArgoCD(wctx); err != nil {
+	g := l.gitops()
+	if err := g.installArgoCD(wctx); err != nil {
 		return nil, err
 	}
 	if l.DryRun {
@@ -182,21 +184,16 @@ func (l *Local) Up(ctx context.Context, opts UpOptions) (*UpResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := l.waitWorkloads(wctx, k, ArgoCDNamespace); err != nil {
+	if err := g.waitWorkloads(wctx, k, ArgoCDNamespace); err != nil {
 		return nil, fmt.Errorf("argo cd not ready: %w", err)
 	}
 	if opts.FromWorktree {
-		if err := l.applyWorktree(wctx, k, comps); err != nil {
+		if err := l.applyWorktree(wctx, g, k, comps); err != nil {
 			return nil, err
 		}
 		return res, nil
 	}
-	l.logf("Applying root Application %s", RootAppName)
-	if err := k.Apply(wctx, kube.Applications, RootApplication(*res.Source, l.Profile.Metadata.Name)); err != nil {
-		return nil, err
-	}
-	if err := l.waitApplications(wctx, k, comps); err != nil {
-		l.diagnostics(ctx, k, comps)
+	if err := g.bootstrap(wctx, k, *res.Source, comps); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -258,136 +255,7 @@ func (l *Local) ensureCluster(ctx context.Context, kindConfig string) (bool, err
 	return true, nil
 }
 
-func (l *Local) installArgoCD(ctx context.Context) error {
-	values := filepath.Join(l.Root, "platform", "bootstrap", "argocd", "values-"+l.Profile.Metadata.Name+".yaml")
-	l.logf("Installing Argo CD (chart %s %s)", ArgoCDChart, ArgoCDChartVersion)
-	_, err := l.Runner.Run(ctx, exec.Cmd{Name: "helm", Args: []string{
-		"upgrade", "--install", ArgoCDRelease, ArgoCDChart,
-		"--repo", ArgoCDChartRepo, "--version", ArgoCDChartVersion,
-		"--namespace", ArgoCDNamespace, "--create-namespace",
-		"--kube-context", l.KubeContext(),
-		"--values", values,
-	}})
-	if err != nil {
-		return fmt.Errorf("install argo cd: %w", err)
-	}
-	return nil
-}
-
-// RootApplication renders the app-of-apps root for a profile.
-func RootApplication(src GitSource, profileName string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": "argoproj.io/v1alpha1",
-		"kind":       "Application",
-		"metadata": map[string]any{
-			"name":      RootAppName,
-			"namespace": ArgoCDNamespace,
-			"labels":    map[string]any{"app.kubernetes.io/part-of": "aibox", "aibox.dev/profile": profileName},
-		},
-		"spec": map[string]any{
-			"project": "default",
-			"source": map[string]any{
-				"repoURL":        src.RepoURL,
-				"targetRevision": src.Revision,
-				"path":           "platform/bootstrap",
-				"helm": map[string]any{
-					"releaseName": RootAppName,
-					"valueFiles":  []any{"values-" + profileName + ".yaml"},
-					"parameters": []any{
-						map[string]any{"name": "repoURL", "value": src.RepoURL},
-						map[string]any{"name": "targetRevision", "value": src.Revision},
-					},
-				},
-			},
-			"destination": map[string]any{"server": "https://kubernetes.default.svc", "namespace": ArgoCDNamespace},
-			"syncPolicy": map[string]any{
-				"automated": map[string]any{"prune": true, "selfHeal": true},
-			},
-		},
-	}}
-}
-
-// Components reads the app-of-apps components for the profile, sorted by sync wave.
-func (l *Local) Components() ([]Component, error) {
-	path := filepath.Join(l.Root, "platform", "bootstrap", "values-"+l.Profile.Metadata.Name+".yaml")
-	data, err := os.ReadFile(path) //nolint:gosec // repository file
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
-	}
-	var v struct {
-		Apps []Component `json:"apps"`
-	}
-	if err := yaml.Unmarshal(data, &v); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
-	}
-	for i := range v.Apps {
-		if v.Apps[i].Path == "" {
-			v.Apps[i].Path = filepath.ToSlash(filepath.Join("platform", v.Apps[i].Name, "overlays", l.Profile.Metadata.Name))
-		}
-	}
-	sort.SliceStable(v.Apps, func(i, j int) bool { return v.Apps[i].SyncWave < v.Apps[j].SyncWave })
-	return v.Apps, nil
-}
-
-func (l *Local) waitWorkloads(ctx context.Context, k KubeAPI, ns string) error {
-	l.logf("Waiting for workloads in namespace %s", ns)
-	var last []string
-	for {
-		notReady, total, err := k.NotReadyWorkloads(ctx, ns)
-		if err == nil && total > 0 && len(notReady) == 0 {
-			return nil
-		}
-		if err == nil {
-			last = notReady
-		}
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for %s (not ready: %s): %w", ns, strings.Join(last, ", "), ctx.Err())
-		case <-time.After(l.poll()):
-		}
-	}
-}
-
-func (l *Local) waitApplications(ctx context.Context, k KubeAPI, comps []Component) error {
-	want := map[string]bool{RootAppName: true}
-	for _, c := range comps {
-		want[c.Name] = true
-	}
-	l.logf("Waiting for %d Argo CD Application(s) to be Synced and Healthy", len(want))
-	var notReady []string
-	for {
-		apps, err := k.ListApplications(ctx, ArgoCDNamespace)
-		if err == nil {
-			notReady = notReady[:0]
-			seen := map[string]bool{}
-			for _, a := range apps {
-				if !want[a.Name] {
-					continue
-				}
-				seen[a.Name] = true
-				if !a.Ready() {
-					notReady = append(notReady, a.String())
-				}
-			}
-			for name := range want {
-				if !seen[name] {
-					notReady = append(notReady, name+": not created yet")
-				}
-			}
-			sort.Strings(notReady)
-			if len(notReady) == 0 {
-				return nil
-			}
-		}
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for Argo CD Applications:\n  %s", strings.Join(notReady, "\n  "))
-		case <-time.After(l.poll()):
-		}
-	}
-}
-
-func (l *Local) applyWorktree(ctx context.Context, k KubeAPI, comps []Component) error {
+func (l *Local) applyWorktree(ctx context.Context, g *gitops, k KubeAPI, comps []Component) error {
 	for _, c := range comps {
 		l.logf("Applying %s from the working tree (%s → namespace %s)", c.Name, c.Path, c.Namespace)
 		rendered, err := l.Runner.Run(ctx, exec.Cmd{Name: "kubectl", Args: []string{"kustomize", "--enable-helm", filepath.Join(l.Root, filepath.FromSlash(c.Path))}})
@@ -403,33 +271,11 @@ func (l *Local) applyWorktree(ctx context.Context, k KubeAPI, comps []Component)
 		if err != nil {
 			return fmt.Errorf("apply %s: %w", c.Name, err)
 		}
-		if err := l.waitWorkloads(ctx, k, c.Namespace); err != nil {
+		if err := g.waitWorkloads(ctx, k, c.Namespace); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (l *Local) diagnostics(ctx context.Context, k KubeAPI, comps []Component) {
-	dctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
-	defer cancel()
-	l.logf("--- diagnostics ---")
-	if apps, err := k.ListApplications(dctx, ArgoCDNamespace); err == nil {
-		for _, a := range apps {
-			l.logf("application %s", a)
-		}
-	}
-	namespaces := []string{ArgoCDNamespace}
-	for _, c := range comps {
-		namespaces = append(namespaces, c.Namespace)
-	}
-	for _, ns := range namespaces {
-		if pods, err := k.PodSummary(dctx, ns); err == nil {
-			for _, p := range pods {
-				l.logf("pod %s", p)
-			}
-		}
-	}
 }
 
 // checkKubernetesVersion verifies that every node image in the kind config matches the

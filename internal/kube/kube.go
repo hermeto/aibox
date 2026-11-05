@@ -38,8 +38,15 @@ type Client struct {
 
 // NewForContext builds a client from the default kubeconfig loading rules and the given
 // context name (e.g. "kind-aibox-local").
-func NewForContext(kubeContext string) (*Client, error) {
+func NewForContext(kubeContext string) (*Client, error) { return NewForKubeconfig("", kubeContext) }
+
+// NewForKubeconfig builds a client from an explicit kubeconfig file ("" = default loading
+// rules) and context name.
+func NewForKubeconfig(kubeconfig, kubeContext string) (*Client, error) {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if kubeconfig != "" {
+		rules.ExplicitPath = kubeconfig
+	}
 	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{CurrentContext: kubeContext}).ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("kubeconfig context %q: %w", kubeContext, err)
