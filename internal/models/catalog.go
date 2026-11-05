@@ -58,6 +58,8 @@ type Model struct {
 	RuntimeFlags       *RuntimeFlags `json:"runtimeFlags,omitempty"`
 	LoadMethod         string        `json:"loadMethod"`
 	SLO                SLO           `json:"slo"`
+	// Routing selects how the gateway spreads requests across servers (default round-robin).
+	Routing string `json:"routing,omitempty"`
 	// StartupTimeoutSeconds bounds weight loading plus the warm-up request (default 1800).
 	StartupTimeoutSeconds int `json:"startupTimeoutSeconds,omitempty"`
 	// ShutdownGracePeriodSeconds bounds draining on shutdown (default 120).
@@ -69,6 +71,14 @@ const (
 	DefaultStartupTimeoutSeconds      = 1800
 	DefaultShutdownGracePeriodSeconds = 120
 )
+
+// RoutingMode returns the model's routing mode.
+func (m *Model) RoutingMode() string {
+	if m.Routing != "" {
+		return m.Routing
+	}
+	return "round-robin"
+}
 
 // StartupTimeout returns the load budget in seconds.
 func (m *Model) StartupTimeout() int {

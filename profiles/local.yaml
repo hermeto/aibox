@@ -15,3 +15,10 @@ spec:
     recommendedMemoryGiB: 8
   guardrails:
     ttl: 24h
+  gateway:
+    rateLimits:
+      default: {requestsPerMinute: 600, tokensPerMinute: 1000000}
+      # Low limits for the e2e tests (test/e2e adds keys for these clients).
+      clients:
+        e2e-requests: {requestsPerMinute: 3, tokensPerMinute: 1000000}
+        e2e-tokens: {requestsPerMinute: 600, tokensPerMinute: 40}

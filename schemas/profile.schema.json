@@ -64,6 +64,27 @@
             "ttl": { "type": "string", "pattern": "^([0-9]+h)?([0-9]+m)?$", "minLength": 2 },
             "ownerEmail": { "type": "string", "format": "email" }
           }
+        },
+        "gateway": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Inference gateway settings (feature 009).",
+          "properties": {
+            "rateLimits": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["default"],
+              "properties": {
+                "default": { "$ref": "#/$defs/rateLimit" },
+                "clients": {
+                  "type": "object",
+                  "description": "Per-client limits, keyed by API key client id.",
+                  "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+                  "additionalProperties": { "$ref": "#/$defs/rateLimit" }
+                }
+              }
+            }
+          }
         }
       },
       "allOf": [
@@ -79,6 +100,15 @@
     }
   },
   "$defs": {
+    "rateLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestsPerMinute", "tokensPerMinute"],
+      "properties": {
+        "requestsPerMinute": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "tokensPerMinute": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
+      }
+    },
     "gpuClass": {
       "type": "object",
       "additionalProperties": false,
