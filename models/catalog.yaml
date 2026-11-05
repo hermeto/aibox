@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../schemas/catalog.schema.json
 # AIBox model catalog — every model AIBox serves, pinned by revision (commit SHA).
-# Revisions of 40 zeros are placeholders: CI (hack/hfcheck) prints the SHA to pin.
+# Revisions are commits (pinned 2026-11-05 from the head of main); a new entry may use 40 zeros
+# as a placeholder, and CI (make check-model-revisions) prints the commit to pin.
 apiVersion: aibox.dev/v1alpha1
 kind: ModelCatalog
 models:
@@ -8,7 +9,7 @@ models:
     description: Baseline 8B model (Apache-2.0).
     enabled: true
     profiles: [aws-dev, aws-bench]
-    source: {type: huggingface, repo: Qwen/Qwen3-8B, revision: "0000000000000000000000000000000000000000"}
+    source: {type: huggingface, repo: Qwen/Qwen3-8B, revision: "b968826d9c46dd6066d109eabc6255188de91218"}
     license: apache-2.0
     gated: false
     quantization: bf16
@@ -24,7 +25,7 @@ models:
     description: Meta Llama 3.1 8B Instruct — accept the license on Hugging Face before enabling.
     enabled: false
     profiles: [aws-dev, aws-bench]
-    source: {type: huggingface, repo: meta-llama/Llama-3.1-8B-Instruct, revision: "0000000000000000000000000000000000000000"}
+    source: {type: huggingface, repo: meta-llama/Llama-3.1-8B-Instruct, revision: "0e9e39f249a16976918f6564b8830bc894c89659"}
     license: llama3.1
     gated: true
     quantization: bf16
@@ -40,7 +41,7 @@ models:
     description: 32B model, FP8 weights, tensor parallel 2.
     enabled: true
     profiles: [aws-bench]
-    source: {type: huggingface, repo: Qwen/Qwen3-32B-FP8, revision: "0000000000000000000000000000000000000000"}
+    source: {type: huggingface, repo: Qwen/Qwen3-32B-FP8, revision: "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df"}
     license: apache-2.0
     gated: false
     quantization: fp8
@@ -56,7 +57,7 @@ models:
     description: 70B-class model, AWQ 4-bit, tensor parallel 4 (multi-GPU test).
     enabled: true
     profiles: [aws-bench]
-    source: {type: huggingface, repo: Qwen/Qwen2.5-72B-Instruct-AWQ, revision: "0000000000000000000000000000000000000000"}
+    source: {type: huggingface, repo: Qwen/Qwen2.5-72B-Instruct-AWQ, revision: "698703eae6604af048a3d2f509995dc302088217"}
     license: qwen
     gated: false
     quantization: awq
@@ -88,7 +89,7 @@ models:
     enabled: true
     serve: false
     profiles: [local]
-    source: {type: huggingface, repo: hf-internal-testing/tiny-random-LlamaForCausalLM, revision: "0000000000000000000000000000000000000000"}
+    source: {type: huggingface, repo: hf-internal-testing/tiny-random-LlamaForCausalLM, revision: "9fb191250dd56d0ba7ec9785a025ed29c03d5998"}
     license: mit
     gated: false
     quantization: none
