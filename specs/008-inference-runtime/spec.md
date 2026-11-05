@@ -22,7 +22,7 @@
 - Q: How is draining configured? → A: Optional catalog field `shutdownGracePeriodSeconds` (default 120) sets `terminationGracePeriodSeconds`; KServe's `preStop` delay lets endpoints drop the pod, then vLLM drains with `--shutdown-timeout` (grace − 20 s); SGLang finishes within the grace period. (decided by agent: vLLM's documented drain flag; one knob per model)
 - Q: Resources and placement? → A: `nvidia.com/gpu` = tensor parallel size; CPU 4 and memory 16 GiB per GPU (requests = limits for memory); `/dev/shm` 8 GiB per GPU for TP > 1; node selector `aibox.dev/gpu-class` = the model's `minGPUClass` and a toleration for `nvidia.com/gpu`. Rendering fails when the TP size exceeds the GPUs of the class's largest instance type in the profile. (decided by agent: simple, documented sizing; E-series experiments tune it)
 - Q: How are quantization and the KV-cache type passed? → A: `quantization: fp8` → `--quantization fp8`, `awq` → `--quantization awq_marlin` (both runtimes), `bf16`/`fp16` → `--dtype`; `kvCacheDtype: fp8` → vLLM `fp8`, SGLang `fp8_e4m3`. (decided by agent: flag values verified in both sources)
-- Q: Where do the metric names live and how is the contract tested? → A: `metrics/runtime-metrics.yaml` maps canonical names (queue, running, KV-cache usage, TTFT, ITL, end-to-end latency, prompt and generated tokens, request success) to the vLLM and SGLang names verified in their sources; `test/contract` checks recorded samples of both runtimes and, when `AIBOX_METRICS_URL` is set, a live endpoint (the simulator in e2e-local). (decided by agent: plan input; one file consumed by observability and autoscaling)
+- Q: Where do the metric names live and how is the contract tested? → A: `metrics/runtime-metrics.yaml` maps canonical names (queue, running, KV-cache usage, TTFT, ITL, end-to-end latency, prompt and generated tokens, request success) to the vLLM and SGLang names verified in their sources; `test/contract` checks metric samples written from both sources and, when `AIBOX_METRICS_URL` is set, a live endpoint (the simulator in e2e-local). (decided by agent: plan input; one file consumed by observability and autoscaling)
 - Q: What serves the local endpoint until the gateway exists? → A: A NodePort Service `inference` (30080) in the local serving overlay selects the KServe-managed pods of the local model; feature 009 replaces it with the gateway. (decided by agent: keeps `aibox smoke` and the README unchanged)
 
 ## User Scenarios & Testing *(mandatory)*
@@ -98,7 +98,7 @@ and autoscaling features.
 breaks experiments.
 
 **Independent Test**: the contract test passes against the local simulator in CI and against
-recorded metric samples of the pinned vLLM and SGLang versions.
+metric samples written from the sources of the pinned vLLM and SGLang versions.
 
 **Acceptance Scenarios**:
 
