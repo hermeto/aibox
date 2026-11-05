@@ -24,7 +24,7 @@
 
 - [ ] T007 [US1] `main.tf`: VPC, EKS (system node group, addons, endpoint CIDRs, logs), Karpenter submodule, storage, iam; `outputs.tf`
 - [ ] T008 [US1] Tests first: `internal/platform/aws_test.go` (`TestUpAWS*`, `TestDownAWS*`: doctor gate, state bucket, tfvars rendering, init/plan/apply/output sequence, confirmation, dry-run)
-- [ ] T009 [US1] `internal/platform/gitops.go` (shared Argo CD + root app bootstrap) and `internal/platform/aws.go`
+- [ ] T009 [US1] `internal/platform/gitops.go` (shared Argo CD + root app bootstrap) and `internal/platform/aws.go` (run ID/owner resolution, operator /32 detection, state-bucket existence check with the bootstrap hint, outputs file, kubeconfig context)
 - [ ] T010 [US1] CLI: aws path in `up`/`down` (`--admin-cidr`, `--owner`), confirmation prompt
 - [ ] T011 [P] [US1] `platform/bootstrap/values-aws-*.yaml`, `platform/bootstrap/argocd/values-aws-*.yaml`
 
@@ -46,6 +46,10 @@
 - [ ] T016 [P] `docs/runbooks/aws-first-run.md` (quotas, region, bootstrap, first run, teardown)
 - [ ] T017 [P] ADR-0001 EKS + Karpenter substrate; ADR index
 - [ ] T018 Verify DoD (`tofu validate && tofu test`, tflint, trivy config, `go test -run 'TestUp.*AWS'`); update PROGRESS.md
+
+## Analysis log
+
+`/speckit-analyze` pass 1 (2026-11-05): 0 CRITICAL, 1 HIGH — edge case "state bucket missing → stop with bootstrap command" and the run-ID/owner clarification were not explicit in any task → added to T009. Coverage FR 8/8, SC 4/4 (SC-003 human-verified via T016). Pass 2: clean.
 
 ## Dependencies
 
