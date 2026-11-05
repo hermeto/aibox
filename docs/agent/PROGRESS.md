@@ -7,18 +7,21 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 001-repo-foundation |
-| Spec Kit phase | implement + converge done; waiting for CI on PR #1 |
-| Last commit | see `git log -1` on `001-repo-foundation` |
+| Current feature | 002-cli-skeleton |
+| Spec Kit phase | implement + converge done; waiting for CI on PR #4 |
+| Last commit | see `git log -1` on `002-cli-skeleton` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
 
 1. [#1](https://github.com/hermeto/aibox/pull/1) `001-repo-foundation` → `claude/jolly-albattani-wcnudk`
+2. [#4](https://github.com/hermeto/aibox/pull/4) `002-cli-skeleton` → `001-repo-foundation`
 
 ## Blockers / `needs-human`
 
-_None yet._
+- [#2](https://github.com/hermeto/aibox/issues/2) one-time repository setup (default branch rename, settings, ruleset, labels, milestones).
+
+Tracking issue: [#3 v1.0 roadmap](https://github.com/hermeto/aibox/issues/3).
 
 ## Environment (prerequisites check, playbook §3)
 
@@ -70,3 +73,9 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
    because the user asked for one PR per feature.
 5. **Commit identity.** Commits are authored by the agent identity configured in the
    container and signed off (`git commit -s`) for DCO.
+6. **AWS credentials in the container.** The container exposes `AWS_*` environment
+   credentials that STS rejects as invalid. Nothing mutating is ever run; the agent does not
+   run AWS-profile doctor checks locally (CI has no credentials, so they skip there).
+7. **Dependency review.** The job first checks that the dependency graph is enabled and
+   warns (instead of failing) while it is disabled; it enforces automatically once enabled
+   (see #2).
