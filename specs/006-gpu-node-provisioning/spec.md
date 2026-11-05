@@ -8,6 +8,18 @@
 
 **Input**: User description: "Karpenter GPU NodePools per GPU class (gpu-l4/g6, gpu-a10g/g5, gpu-h100/p5 with an EC2 Capacity Block), tainted and labeled, with per-pool limits and capacity type from the profile; WhenEmpty consolidation; NVIDIA-enabled AMI with local NVMe for the weight cache; GPU resources and DCGM metrics; scale to zero; a local overlay with a fake GPU node on kind (playbook §6, feature 006)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: Bottlerocket NVIDIA or AL2023 accelerated? → A: Bottlerocket, AMI alias pinned to `bottlerocket@v1.68.1`; Karpenter selects the NVIDIA variant for GPU instance types and the variant ships the driver and the NVIDIA device plugin, so only the DCGM exporter is installed (no GPU Operator). (decided by agent: smallest moving parts; device plugin and driver versions move with the pinned AMI)
+- Q: How do node pools stay in sync with the profiles? → A: `aibox render nodepools --profile <p>` generates `platform/gpu/overlays/<p>/nodepools.yaml` from the profile; a Go test fails when the committed file differs from the rendered one. (decided by agent: single source of truth = profile; no runtime templating)
+- Q: Default `consolidateAfter`? → A: 10m for GPU pools. (decided by agent: long enough to keep a warm node across short idle gaps in benchmarks, short enough to bound idle cost)
+- Q: How are the H100 capacity-block pools expressed in Karpenter v1.15.1? → A: The EC2NodeClass selects the reservation with `capacityReservationSelectorTerms: [{id: …}]` and the NodePool requires `karpenter.sh/capacity-type In [reserved]`. The reservation ID comes from the profile (a placeholder in git; set the real one on the campaign branch). (decided by agent: verified against the v1.15.1 CRDs)
+- Q: Pool limits? → A: `nvidia.com/gpu` = maxNodes × GPUs of the largest type; `cpu` = maxNodes × vCPUs of the largest type (from a small built-in instance table for the profile's types; unknown types fail rendering). (decided by agent: deterministic, offline)
+- Q: How is the local fake GPU node provided? → A: A second kind worker labeled `aibox.dev/gpu-class=gpu-sim` and tainted `nvidia.com/gpu=present:NoSchedule`; the simulator tolerates the taint and selects the label. (decided by agent: system pods stay on the first worker; serving exercises GPU scheduling rules)
+- Q: Images without a reachable registry from the build environment (nvcr.io)? → A: A CI check renders every overlay, lists images without a digest and fails with the digest to pin (`hack/check-image-digests.sh`); digests are pinned from its output. (decided by agent: enforces principle II for chart images too)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - One node pool per GPU class (Priority: P1)
