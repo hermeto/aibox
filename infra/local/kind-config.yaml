@@ -1,0 +1,29 @@
+# kind cluster for the `local` profile. The node image is pinned by digest (kind v0.33.0
+# default for Kubernetes 1.37); keep `spec.cluster.kubernetesVersion` in
+# profiles/local.yaml in sync — `aibox up` checks it.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: aibox-local
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    extraPortMappings:
+      # Inference API (simulator now, gateway from feature 009)
+      - containerPort: 30080
+        hostPort: 30080
+        listenAddress: 127.0.0.1
+        protocol: TCP
+      # Argo CD UI (insecure HTTP, local only)
+      - containerPort: 30081
+        hostPort: 30081
+        listenAddress: 127.0.0.1
+        protocol: TCP
+      # Grafana (feature 010)
+      - containerPort: 30300
+        hostPort: 30300
+        listenAddress: 127.0.0.1
+        protocol: TCP
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    labels:
+      aibox.dev/role: worker

@@ -124,3 +124,27 @@ func (d DryRun) LookPath(name string) (string, error) {
 	}
 	return "/usr/bin/" + name, nil
 }
+
+// ReadOnly reports whether a command only inspects state, so dry runs may execute it:
+// git, version queries, `kind get`, `kubectl kustomize`, `helm template`, `docker info`.
+func ReadOnly(c Cmd) bool {
+	first := ""
+	if len(c.Args) > 0 {
+		first = c.Args[0]
+	}
+	switch c.Name {
+	case "git":
+		return true
+	case "kind":
+		return first == "get" || first == "version"
+	case "kubectl":
+		return first == "kustomize" || first == "version"
+	case "helm":
+		return first == "template" || first == "version"
+	case "docker":
+		return first == "info" || first == "--version" || first == "version"
+	case "tofu", "terraform":
+		return first == "version"
+	}
+	return false
+}

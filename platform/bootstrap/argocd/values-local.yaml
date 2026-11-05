@@ -1,0 +1,46 @@
+# Helm values for the Argo CD install performed by `aibox up --profile local`
+# (chart argo-cd 10.12.1, Argo CD v3.6.1). Images are pinned by digest.
+global:
+  image:
+    # Index digest read from the first e2e-local run (quay.io is unreachable from the agent's
+    # build environment; see specs/003-local-platform/research.md R3).
+    tag: v3.6.1@sha256:296e3d74f449b2ce45265613fcb68c18ed7366488360c8ea32f5f2a93d2e5c54
+dex:
+  enabled: false
+notifications:
+  enabled: false
+redis:
+  image:
+    tag: 8.6.4-alpine@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+configs:
+  params:
+    server.insecure: true
+  cm:
+    # Kustomize overlays may inflate pinned Helm charts.
+    kustomize.buildOptions: --enable-helm
+    # Faster feedback for local development and CI (default 120s).
+    timeout.reconciliation: 60s
+    # Restore Application health so app-of-apps sync waves wait for child health.
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil then
+        if obj.status.health ~= nil then
+          hs.status = obj.status.health.status
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+        end
+      end
+      return hs
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30081
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }

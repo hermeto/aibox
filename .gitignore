@@ -63,3 +63,4 @@ bench/results/**/raw/
 # --- Tooling ---
 node_modules/
 .cache/
+hack/crds/

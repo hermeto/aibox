@@ -79,9 +79,55 @@ jobs:
       - name: Unimplemented commands exit 2
         run: |
           set +e
-          ./bin/aibox up --profile local
+          ./bin/aibox bench --profile local
           code=$?
           test "$code" -eq 2
+
+  e2e-local:
+    name: e2e-local
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      KIND_VERSION: v0.33.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
+        with:
+          version: v1.37.2
+      - name: Install kind
+        run: |
+          go install "sigs.k8s.io/kind@${KIND_VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: up → up (idempotent) → smoke
+        env:
+          AIBOX_E2E_REPO_URL: ${{ github.event.pull_request.head.repo.clone_url || format('{0}/{1}.git', github.server_url, github.repository) }}
+          AIBOX_E2E_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          AIBOX_E2E_KEEP: "1"
+        run: go test -tags e2e ./test/e2e/... -run TestLocalPlatform -timeout 30m -count=1 -v
+      - name: Running images (digests)
+        if: always()
+        run: |
+          kubectl --context kind-aibox-local get pods -A \
+            -o jsonpath='{range .items[*]}{range .status.containerStatuses[*]}{.image}{"  "}{.imageID}{"\n"}{end}{end}' | sort -u || true
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl --context kind-aibox-local get applications -n argocd -o yaml || true
+          kubectl --context kind-aibox-local get pods -A -o wide || true
+          kubectl --context kind-aibox-local get events -A --sort-by=.lastTimestamp | tail -n 100 || true
+      - name: down
+        if: always()
+        run: go run ./cmd/aibox down --profile local
 
   pr-title:
     name: pr-title
@@ -184,7 +230,7 @@ jobs:
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [lint, test, cli, pr-title, dco, dependency-review, trivy]
+    needs: [lint, test, cli, e2e-local, pr-title, dco, dependency-review, trivy]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}

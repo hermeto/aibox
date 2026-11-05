@@ -1,0 +1,11 @@
+# Set by `aibox up` (helm parameters on the root Application).
+repoURL: https://github.com/hermeto/aibox.git
+targetRevision: main
+# Profile overlay rendered for every component: platform/<component>/overlays/<profile>
+profile: local
+# Argo CD namespace and project for child Applications.
+argocdNamespace: argocd
+project: default
+# Components, in sync-wave order (CRDs −2, operators −1, workloads ≥ 0). Profiles list
+# theirs in values-<profile>.yaml.
+apps: []

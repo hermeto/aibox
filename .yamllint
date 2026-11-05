@@ -4,6 +4,8 @@ ignore: |
   node_modules/
   .specify/
   internal/profile/testdata/invalid/not-yaml.yaml
+  # Helm templates are Go templates, validated by `make validate-manifests` instead.
+  platform/**/templates/
 rules:
   braces:
     max-spaces-inside: 1

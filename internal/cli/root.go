@@ -12,7 +12,9 @@ import (
 
 	"github.com/hermeto/aibox/internal/doctor"
 	"github.com/hermeto/aibox/internal/exec"
+	"github.com/hermeto/aibox/internal/kube"
 	"github.com/hermeto/aibox/internal/output"
+	"github.com/hermeto/aibox/internal/platform"
 )
 
 // RoadmapURL is where unimplemented commands point to.
@@ -34,6 +36,8 @@ type App struct {
 	Runner exec.Runner         // nil means exec.Real
 	AWS    doctor.AWSFactory   // nil means the SDK-backed client
 	Getenv func(string) string // nil means os.Getenv
+	// Kube connects to a kubeconfig context (nil means client-go).
+	Kube func(kubeContext string) (platform.KubeAPI, error)
 
 	Opts   Options
 	Format output.Format
@@ -47,7 +51,7 @@ func (a *App) runner() exec.Runner {
 		base = exec.Real{Logger: a.Logger}
 	}
 	if a.Opts.DryRun {
-		return exec.DryRun{Inner: base, Out: a.Err}
+		return exec.DryRun{Inner: base, Out: a.Err, ReadOnly: exec.ReadOnly}
 	}
 	return base
 }
@@ -106,7 +110,7 @@ or on AWS EKS), runs reproducible benchmarks and reports cost per 1M tokens and 
 	pf.BoolVar(&app.Opts.DryRun, "dry-run", false, "print external commands instead of running them")
 	pf.BoolVarP(&app.Opts.Yes, "yes", "y", false, "assume yes for confirmations")
 
-	root.AddCommand(newDoctorCmd(app), newVersionCmd(app))
+	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app))
 	for _, c := range notImplemented {
 		root.AddCommand(newNotImplementedCmd(c))
 	}
@@ -137,3 +141,16 @@ func run(ctx context.Context, app *App, args []string) int {
 }
 
 func goos() string { return runtime.GOOS }
+
+func (a *App) kube() func(string) (platform.KubeAPI, error) {
+	if a.Kube != nil {
+		return a.Kube
+	}
+	return func(kubeContext string) (platform.KubeAPI, error) {
+		c, err := kube.NewForContext(kubeContext)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+}

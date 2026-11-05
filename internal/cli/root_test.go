@@ -86,7 +86,7 @@ func TestNotImplementedExit2(t *testing.T) {
 }
 
 func TestNotImplementedJSONError(t *testing.T) {
-	r := runCLI(t, &App{}, "up", "-o", "json")
+	r := runCLI(t, &App{}, "bench", "-o", "json")
 	var got map[string]any
 	if err := json.Unmarshal([]byte(r.stdout), &got); err != nil {
 		t.Fatalf("stdout is not JSON: %q", r.stdout)

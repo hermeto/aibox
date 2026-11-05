@@ -8,7 +8,7 @@ spec:
   provider: kind
   cluster:
     name: aibox-local
-    kubernetesVersion: "1.34"
+    kubernetesVersion: "1.37"
   local:
     minCPUs: 4
     minMemoryGiB: 6

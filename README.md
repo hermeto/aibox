@@ -17,6 +17,29 @@ OpenTelemetry, and runs locally on kind (no GPU) as well as on AWS EKS.
 - Architecture decisions: [`docs/adr/`](docs/adr/README.md)
 - Feature specs (Spec Kit): [`specs/`](specs/)
 
+## 5-minute local quickstart
+
+Runs the whole platform on [kind](https://kind.sigs.k8s.io/) with no GPU and no cloud
+account: a simulated model (`sim-llama-8b`, served by the
+[llm-d inference simulator](https://github.com/llm-d/llm-d-inference-sim)) behind an
+OpenAI-compatible API, delivered by Argo CD.
+
+Prerequisites: Docker (4 CPUs / 8 GB for the Docker VM), `kind`, `kubectl`, `helm`, Go.
+
+```bash
+git clone https://github.com/hermeto/aibox && cd aibox
+make build
+./bin/aibox doctor --profile local      # checks tools and Docker resources
+./bin/aibox up --profile local          # kind + Argo CD + app-of-apps (~5 minutes)
+curl -s http://127.0.0.1:30080/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model":"sim-llama-8b","messages":[{"role":"user","content":"Hello"}]}'
+./bin/aibox smoke --profile local       # models, one completion per model, metrics
+./bin/aibox down --profile local        # deletes the cluster
+```
+
+Argo CD tracks your current branch on `origin`; push first, or use `--from-worktree` to apply
+unpushed changes. The Argo CD UI is at <http://127.0.0.1:30081> (user `admin`).
+
 ## The `aibox` CLI
 
 ```bash

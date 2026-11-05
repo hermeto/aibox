@@ -78,3 +78,20 @@ func TestFakeScriptsAndRecords(t *testing.T) {
 		t.Fatalf("recorded %d calls", got)
 	}
 }
+
+func TestReadOnly(t *testing.T) {
+	yes := []Cmd{{Name: "git", Args: []string{"status"}}, {Name: "kind", Args: []string{"get", "clusters"}}, {Name: "kubectl", Args: []string{"kustomize", "x"}},
+		{Name: "helm", Args: []string{"template", "x"}}, {Name: "docker", Args: []string{"info"}}, {Name: "tofu", Args: []string{"version"}}}
+	no := []Cmd{{Name: "kind", Args: []string{"create", "cluster"}}, {Name: "kubectl", Args: []string{"apply"}}, {Name: "helm", Args: []string{"upgrade"}},
+		{Name: "docker", Args: []string{"run"}}, {Name: "terraform", Args: []string{"apply"}}, {Name: "rm"}}
+	for _, c := range yes {
+		if !ReadOnly(c) {
+			t.Fatalf("%s should be read-only", c)
+		}
+	}
+	for _, c := range no {
+		if ReadOnly(c) {
+			t.Fatalf("%s should not be read-only", c)
+		}
+	}
+}

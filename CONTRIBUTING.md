@@ -25,6 +25,15 @@ The CLI lives in `cmd/aibox` and `internal/` (`cli`, `profile`, `doctor`, `exec`
 `exec.Fake` and `--dry-run` works everywhere. Golden files (help output, doctor reports) are
 refreshed with `go test ./internal/cli ./internal/doctor -update` — review the diff.
 
+## Working on the platform manifests
+
+Components live in `platform/<component>/{base,overlays/<profile>}` and are delivered by the
+Argo CD app-of-apps in `platform/bootstrap` (add your component to `values-<profile>.yaml`).
+Validate everything offline with `make validate-manifests` (kubeconform with pinned
+Kubernetes and CRD schemas; regenerate CRD schemas with `hack/gen-crd-schemas.sh`). Try
+unpushed changes on kind with `aibox up --profile local --from-worktree`; CI runs the full
+bring-up in the `e2e-local` job (`go test -tags e2e ./test/e2e/...`).
+
 ## How work is organized: Spec Kit
 
 Every feature follows Spec-Driven Development with [Spec Kit](https://github.com/github/spec-kit):
