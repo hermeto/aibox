@@ -7,9 +7,9 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 003-local-platform |
-| Spec Kit phase | implement + converge done; PR #5 ready after CI |
-| Last commit | see `git log -1` on `003-local-platform` |
+| Current feature | 004-aws-infrastructure |
+| Spec Kit phase | implement + converge done; waiting for CI on PR #6 |
+| Last commit | see `git log -1` on `004-aws-infrastructure` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
@@ -17,6 +17,7 @@
 1. [#1](https://github.com/hermeto/aibox/pull/1) `001-repo-foundation` → `claude/jolly-albattani-wcnudk`
 2. [#4](https://github.com/hermeto/aibox/pull/4) `002-cli-skeleton` → `001-repo-foundation`
 3. [#5](https://github.com/hermeto/aibox/pull/5) `003-local-platform` → `002-cli-skeleton`
+4. [#6](https://github.com/hermeto/aibox/pull/6) `004-aws-infrastructure` → `003-local-platform`
 
 ## Blockers / `needs-human`
 
@@ -83,3 +84,7 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
 8. **Image digests from CI.** Registries whose blobs are unreachable from the agent's
    container (quay.io, ghcr blobs) are pinned with digests read from the `e2e-local` job's
    "Running images (digests)" step.
+9. **Terraform locally.** registry.terraform.io / registry.opentofu.org are unreachable from
+   the container: providers come from releases.hashicorp.com into a filesystem mirror and
+   modules through a throwaway local registry shim (scratchpad only, never committed). CI
+   uses the real registries.
