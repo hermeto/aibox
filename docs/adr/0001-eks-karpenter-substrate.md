@@ -52,6 +52,12 @@ CI job `terraform` (fmt, validate, mocked `tofu test`, tflint AWS ruleset, Trivy
 human run per `docs/runbooks/aws-first-run.md` (target ≤ 20 min to a reachable cluster);
 GPU pools in feature 006.
 
+## Updates
+
+- Feature 006: GPU pools use Bottlerocket NVIDIA (`bottlerocket@v1.68.1`, driver and device
+  plugin in the AMI, no GPU Operator), `WhenEmpty` consolidation after 10 minutes, RAID0
+  instance store for the weight cache, and reserved capacity (Capacity Blocks) for H100.
+
 ## Links
 
 - [specs/004-aws-infrastructure/research.md](../../specs/004-aws-infrastructure/research.md)
