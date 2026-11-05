@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Downloads the CRDs of pinned platform components and regenerates hack/schemas/ (strict
 # JSON Schemas for kubeconform). Re-run after bumping a component version.
+# K8S_VERSION must match K8S_SCHEMA_VERSION in the Makefile.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+k8s="${K8S_VERSION:-1.37.0}"
 
 # name|url (pinned to the component version used in platform/)
 crds=(
@@ -18,3 +20,9 @@ for entry in "${crds[@]}"; do
   curl -fsSL "$url" -o "hack/crds/${name}.yaml"
 done
 go run ./hack/crd2schema -out hack/schemas hack/crds/*.yaml
+
+# The default kubeconform registry has no schema for CustomResourceDefinition itself, which
+# charts that ship CRDs (Karpenter) render; extract it from the Kubernetes OpenAPI document.
+curl -fsSL "https://raw.githubusercontent.com/kubernetes/kubernetes/v${k8s}/api/openapi-spec/v3/apis__apiextensions.k8s.io__v1_openapi.json" \
+  -o hack/crds/apiextensions-v1-openapi.json
+go run ./hack/crd2schema -out hack/schemas -openapi hack/crds/apiextensions-v1-openapi.json -kind CustomResourceDefinition
