@@ -79,7 +79,7 @@ jobs:
       - name: Unimplemented commands exit 2
         run: |
           set +e
-          ./bin/aibox up --profile local
+          ./bin/aibox bench --profile local
           code=$?
           test "$code" -eq 2
 
