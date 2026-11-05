@@ -34,6 +34,22 @@ configs:
         end
       end
       return hs
+    # Model servers (KServe LLMInferenceService) are healthy once their Ready condition is true.
+    resource.customizations.health.serving.kserve.io_LLMInferenceService: |
+      hs = {status = "Progressing", message = "Waiting for the model server"}
+      if obj.status ~= nil and obj.status.conditions ~= nil then
+        for _, c in ipairs(obj.status.conditions) do
+          if c.type == "Ready" then
+            if c.status == "True" then
+              hs.status = "Healthy"
+            end
+            if c.message ~= nil then
+              hs.message = c.message
+            end
+          end
+        end
+      end
+      return hs
 server:
   service:
     type: NodePort

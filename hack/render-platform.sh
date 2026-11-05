@@ -13,8 +13,16 @@ for values in platform/bootstrap/values-*.yaml; do
     --set repoURL=https://github.com/hermeto/aibox.git --set targetRevision=main --set runId=render-check
   echo "---"
 done
-for overlay in platform/*/overlays/*/; do
-  echo "--- # $overlay" >&2
-  "$kustomize" build --enable-helm "$overlay"
-  echo "---"
+for component in platform/*/; do
+  [[ "$component" == platform/bootstrap/ ]] && continue
+  if [[ -d "${component}overlays" ]]; then
+    dirs=("${component}"overlays/*/)
+  else
+    dirs=("${component}base/") # components shared by every profile
+  fi
+  for dir in "${dirs[@]}"; do
+    echo "--- # $dir" >&2
+    "$kustomize" build --enable-helm "$dir"
+    echo "---"
+  done
 done

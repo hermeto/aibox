@@ -5,6 +5,9 @@ targetRevision: main
 profile: local
 # Set by `aibox up` for cloud profiles; tags Karpenter-launched instances.
 runId: ""
+# Set by `aibox up` once the profile's model weights are mirrored; components marked
+# `requiresModels` (cloud model servers) deploy only then.
+modelsReady: false
 # Argo CD namespace and project for child Applications.
 argocdNamespace: argocd
 project: default

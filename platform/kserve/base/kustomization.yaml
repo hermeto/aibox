@@ -1,0 +1,24 @@
+# KServe LLMInferenceService (ADR-0002): CRDs and the llmisvc controller only — no Knative,
+# Istio or predictive InferenceService controller. Model servers speak HTTP (the chart does not
+# enable LLMInferenceService TLS). The chart also installs the Gateway API Inference Extension
+# CRDs used by inference routing (feature 011).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kserve
+helmCharts:
+  - name: kserve-llmisvc-crd
+    repo: oci://ghcr.io/kserve/charts
+    version: v0.21.0
+    releaseName: kserve-llmisvc-crd
+    namespace: kserve
+    includeCRDs: true
+  - name: kserve-llmisvc-resources
+    repo: oci://ghcr.io/kserve/charts
+    version: v0.21.0
+    releaseName: kserve-llmisvc
+    namespace: kserve
+    valuesInline:
+      kserve:
+        llmisvc:
+          controller:
+            tag: v0.21.0@sha256:be2261cc76509324d80a5b9998cd35c9d9e8d681453f21223c37fe0b5ea9f52c

@@ -17,6 +17,7 @@ import (
 
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
+	"github.com/hermeto/aibox/internal/models"
 	"github.com/hermeto/aibox/internal/profile"
 )
 
@@ -57,6 +58,8 @@ type Component struct {
 	Namespace string `json:"namespace"`
 	SyncWave  int    `json:"syncWave"`
 	Path      string `json:"path,omitempty"`
+	// RequiresModels components deploy only after the profile's weights are mirrored.
+	RequiresModels bool `json:"requiresModels,omitempty"`
 }
 
 // Local brings the local (kind) profile up and down.
@@ -108,7 +111,8 @@ func (r *UpResult) RenderText(w io.Writer) error {
 }
 
 func (l *Local) gitops() *gitops {
-	return &gitops{Runner: l.Runner, Root: l.Root, Log: l.Log, ProfileName: l.Profile.Metadata.Name, KubeContext: l.KubeContext(), PollInterval: l.PollInterval}
+	return &gitops{Runner: l.Runner, Root: l.Root, Log: l.Log, ProfileName: l.Profile.Metadata.Name, KubeContext: l.KubeContext(), PollInterval: l.PollInterval,
+		WeightsBucket: models.LocalTarget().Bucket, Region: models.LocalTarget().Region}
 }
 
 // Components reads the app-of-apps components for the profile, sorted by sync wave.
@@ -172,7 +176,7 @@ func (l *Local) Up(ctx context.Context, opts UpOptions) (*UpResult, error) {
 	}
 	if l.DryRun {
 		if res.Source != nil {
-			obj := RootApplication(*res.Source, l.Profile.Metadata.Name, "")
+			obj := RootApplication(*res.Source, l.Profile.Metadata.Name, RootParams{})
 			out, _ := yaml.Marshal(obj.Object)
 			l.logf("[dry-run] would apply:\n%s", out)
 		} else {

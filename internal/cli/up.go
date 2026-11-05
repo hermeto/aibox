@@ -36,6 +36,7 @@ func newUpCmd(app *App) *cobra.Command {
 		notifyEmail string
 		ttl         time.Duration
 		skipDoctor  bool
+		skipModels  bool
 	)
 	cmd := &cobra.Command{
 		Use:   "up",
@@ -84,6 +85,11 @@ tree (unpushed changes, private forks).`,
 				if err != nil {
 					return err
 				}
+				if !skipModels && !app.Opts.DryRun {
+					if err := app.serveModels(cmd.Context(), p, a, opts.Timeout); err != nil {
+						return err
+					}
+				}
 				return app.print(res)
 			}
 			l, err := app.localPlatform(p)
@@ -108,6 +114,7 @@ tree (unpushed changes, private forks).`,
 	f.Float64Var(&budgetFlag, "budget", 0, "AWS: run budget in USD (or BUDGET_USD); required for cloud profiles")
 	f.StringVar(&notifyEmail, "notify-email", "", "AWS: e-mail for budget and teardown alerts (default: profile ownerEmail)")
 	f.DurationVar(&ttl, "ttl", 0, "AWS: automatic teardown after this duration (default: profile guardrails.ttl; 30m-24h)")
+	f.BoolVar(&skipModels, "skip-models", false, "AWS: do not mirror model weights or deploy the model servers")
 	return cmd
 }
 

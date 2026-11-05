@@ -1,0 +1,26 @@
+# cert-manager issues the webhook certificates of KServe (and later the gateway).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cert-manager
+helmCharts:
+  - name: cert-manager
+    repo: https://charts.jetstack.io
+    version: v1.21.3
+    releaseName: cert-manager
+    namespace: cert-manager
+    includeCRDs: true
+    valuesInline:
+      crds:
+        enabled: true
+        keep: true
+      # Helm hook Job; Argo CD waits for the Deployments instead.
+      startupapicheck:
+        enabled: false
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+      webhook:
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+      cainjector:
+        resources:
+          requests: {cpu: 10m, memory: 64Mi}

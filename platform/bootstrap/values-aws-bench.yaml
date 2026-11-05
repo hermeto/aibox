@@ -1,12 +1,20 @@
 profile: aws-bench
 # Components, in sync-wave order (CRDs/operators first).
 apps:
+  - name: cert-manager
+    namespace: cert-manager
+    syncWave: -2
+    path: platform/cert-manager/base
   - name: karpenter
     namespace: karpenter
     syncWave: -1
   - name: secrets
     namespace: external-secrets
     syncWave: -1
+  - name: kserve
+    namespace: kserve
+    syncWave: -1
+    path: platform/kserve/base
   - name: gpu
     namespace: gpu-system
     syncWave: 0
@@ -15,3 +23,8 @@ apps:
   - name: models
     namespace: aibox-models
     syncWave: 0
+  - name: serving
+    namespace: aibox-serving
+    syncWave: 10
+    # Model servers load mirrored weights: deployed after `aibox models sync`.
+    requiresModels: true
