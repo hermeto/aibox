@@ -1,0 +1,42 @@
+# Samples of the sglang v0.5.23 metric families AIBox depends on, in the Prometheus
+# text format the runtime's Python client writes (counters keep the _total suffix). Written from
+# the metric definitions in the pinned sources; see specs/008-inference-runtime/research.md.
+# HELP sglang:num_queue_reqs Requests queued and not yet scheduled.
+# TYPE sglang:num_queue_reqs gauge
+sglang:num_queue_reqs{model_name="qwen3-8b",tp_rank="0"} 0.0
+# HELP sglang:num_running_reqs Requests being processed.
+# TYPE sglang:num_running_reqs gauge
+sglang:num_running_reqs{model_name="qwen3-8b",tp_rank="0"} 0.0
+# HELP sglang:token_usage Fraction of the KV cache in use (0-1).
+# TYPE sglang:token_usage gauge
+sglang:token_usage{model_name="qwen3-8b",tp_rank="0"} 0.0
+# HELP sglang:time_to_first_token_seconds Time from request arrival to the first generated token.
+# TYPE sglang:time_to_first_token_seconds histogram
+sglang:time_to_first_token_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="0.1"} 3.0
+sglang:time_to_first_token_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="1.0"} 3.0
+sglang:time_to_first_token_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="+Inf"} 3.0
+sglang:time_to_first_token_seconds_sum{model_name="qwen3-8b",tp_rank="0"} 0.42
+sglang:time_to_first_token_seconds_count{model_name="qwen3-8b",tp_rank="0"} 3.0
+# HELP sglang:inter_token_latency_seconds Time between consecutive generated tokens.
+# TYPE sglang:inter_token_latency_seconds histogram
+sglang:inter_token_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="0.1"} 3.0
+sglang:inter_token_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="1.0"} 3.0
+sglang:inter_token_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="+Inf"} 3.0
+sglang:inter_token_latency_seconds_sum{model_name="qwen3-8b",tp_rank="0"} 0.42
+sglang:inter_token_latency_seconds_count{model_name="qwen3-8b",tp_rank="0"} 3.0
+# HELP sglang:e2e_request_latency_seconds End-to-end request latency in the server.
+# TYPE sglang:e2e_request_latency_seconds histogram
+sglang:e2e_request_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="0.1"} 3.0
+sglang:e2e_request_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="1.0"} 3.0
+sglang:e2e_request_latency_seconds_bucket{model_name="qwen3-8b",tp_rank="0",le="+Inf"} 3.0
+sglang:e2e_request_latency_seconds_sum{model_name="qwen3-8b",tp_rank="0"} 0.42
+sglang:e2e_request_latency_seconds_count{model_name="qwen3-8b",tp_rank="0"} 3.0
+# HELP sglang:prompt_tokens_total Prompt (prefill) tokens processed.
+# TYPE sglang:prompt_tokens_total counter
+sglang:prompt_tokens_total{model_name="qwen3-8b",tp_rank="0"} 128.0
+# HELP sglang:generation_tokens_total Tokens generated.
+# TYPE sglang:generation_tokens_total counter
+sglang:generation_tokens_total{model_name="qwen3-8b",tp_rank="0"} 128.0
+# HELP sglang:num_requests_total Requests finished.
+# TYPE sglang:num_requests_total counter
+sglang:num_requests_total{model_name="qwen3-8b",tp_rank="0"} 128.0

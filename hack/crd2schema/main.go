@@ -31,8 +31,9 @@ type crd struct {
 			Kind string `json:"kind"`
 		} `json:"names"`
 		Versions []struct {
-			Name   string `json:"name"`
-			Schema struct {
+			Name    string `json:"name"`
+			Storage bool   `json:"storage"`
+			Schema  struct {
 				OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
 			} `json:"schema"`
 		} `json:"versions"`
@@ -76,6 +77,9 @@ func convertFile(path, out string) error {
 			continue
 		}
 		for _, v := range c.Spec.Versions {
+			if !v.Storage { // AIBox manifests use storage versions; this keeps the files small
+				continue
+			}
 			schema := v.Schema.OpenAPIV3Schema
 			strict(schema)
 			if err := write(out, c.Spec.Group, c.Spec.Names.Kind, v.Name, schema); err != nil {
@@ -146,8 +150,9 @@ func convertOpenAPI(path, kind, out string) error {
 }
 
 func write(out, group, kind, version string, schema map[string]any) error {
+	stripDescriptions(schema)
 	schema["$schema"] = "http://json-schema.org/draft-07/schema#"
-	buf, err := json.MarshalIndent(schema, "", "  ")
+	buf, err := json.Marshal(schema)
 	if err != nil {
 		return err
 	}
@@ -192,6 +197,26 @@ func strict(node map[string]any) {
 					strict(m)
 				}
 			}
+		}
+	}
+}
+
+// stripDescriptions removes documentation from a schema (it is not needed for validation and
+// makes up most of the size of large CRDs). A property named "description" is kept.
+func stripDescriptions(node any) {
+	switch n := node.(type) {
+	case map[string]any:
+		if d, ok := n["description"]; ok {
+			if _, isString := d.(string); isString {
+				delete(n, "description")
+			}
+		}
+		for _, v := range n {
+			stripDescriptions(v)
+		}
+	case []any:
+		for _, v := range n {
+			stripDescriptions(v)
 		}
 	}
 }
