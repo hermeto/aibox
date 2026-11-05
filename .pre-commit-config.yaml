@@ -1,0 +1,40 @@
+# Pre-commit mirrors CI: every hook calls the same `make` target as the CI lint job.
+# Install with `make dev-setup`; run on demand with `pre-commit run --all-files`.
+repos:
+  - repo: local
+    hooks:
+      - id: lint-go
+        name: golangci-lint
+        entry: make lint-go
+        language: system
+        pass_filenames: false
+        types: [go]
+      - id: lint-actions
+        name: actionlint
+        entry: make lint-actions lint-pins
+        language: system
+        pass_filenames: false
+        files: ^\.github/workflows/
+      - id: lint-shell
+        name: shellcheck
+        entry: make lint-shell
+        language: system
+        pass_filenames: false
+        types: [shell]
+      - id: lint-yaml
+        name: yamllint
+        entry: make lint-yaml
+        language: system
+        pass_filenames: false
+        types: [yaml]
+      - id: lint-markdown
+        name: markdownlint
+        entry: make lint-markdown
+        language: system
+        pass_filenames: false
+        types: [markdown]
+      - id: lint-editorconfig
+        name: editorconfig-checker
+        entry: make lint-editorconfig
+        language: system
+        pass_filenames: false
