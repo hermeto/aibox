@@ -41,6 +41,9 @@ jobs:
       - run: make lint
       - name: Images pinned by digest
         run: make check-image-digests
+      - name: Model revisions pinned and resolvable
+        if: ${{ !cancelled() }}
+        run: make check-model-revisions
 
   test:
     name: test
@@ -127,6 +130,9 @@ jobs:
           kubectl --context kind-aibox-local get applications -n argocd -o yaml || true
           kubectl --context kind-aibox-local get pods -A -o wide || true
           kubectl --context kind-aibox-local get events -A --sort-by=.lastTimestamp | tail -n 100 || true
+          kubectl --context kind-aibox-local get externalsecrets,clustersecretstores -A -o wide || true
+          kubectl --context kind-aibox-local -n aibox-models logs -l app.kubernetes.io/name=model-sync --tail=100 --prefix || true
+          kubectl --context kind-aibox-local -n aibox-models logs deploy/seaweedfs --tail=50 || true
       - name: down
         if: always()
         run: go run ./cmd/aibox down --profile local
