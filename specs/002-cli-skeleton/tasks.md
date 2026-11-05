@@ -17,7 +17,7 @@
 
 - [ ] T003 [P] `internal/exec` Runner interface, Real, DryRun, Fake (+ tests)
 - [ ] T004 [P] `internal/output` text/JSON printer (+ tests)
-- [ ] T005 `internal/cli/errors.go` typed errors and `ExitCode` mapping (0/1/2/64) (+ tests)
+- [ ] T005 `internal/cli/errors.go` typed errors, `ExitCode` mapping (0/1/2/64) and JSON error object on stdout in `--output json` mode (+ tests)
 
 ## Phase 3: User Story 1 — command tree (P1)
 
@@ -54,8 +54,12 @@
 - [ ] T021 [P] `docs/adr/0008-cli-in-go-with-cobra.md`; ADR index
 - [ ] T022 [P] CI job `cli` (doctor --profile local, `up` exits 2) added to `ci-gate`
 - [ ] T023 [P] CONTRIBUTING/README: CLI usage section
-- [ ] T024 Verify `go test ./... -race -cover` (≥ 80% profile/doctor), `make lint`, definition of done
+- [ ] T024 Verify `go test ./... -race -cover` (≥ 80% profile/doctor), `make lint`, cross-compile `GOOS=linux GOARCH=arm64` and `GOOS=darwin GOARCH=arm64`, definition of done
 - [ ] T025 Update docs/agent/PROGRESS.md
+
+## Analysis log
+
+`/speckit-analyze` pass 1 (2026-11-05): 0 CRITICAL, 1 HIGH, 1 MEDIUM. HIGH — edge case "JSON error object in `--output json` mode" had no task → folded into T005. MEDIUM — edge case "Linux arm64" had no verification → cross-compilation added to T024. Coverage: FR 11/11, SC 5/5. Pass 2: clean.
 
 ## Dependencies
 
