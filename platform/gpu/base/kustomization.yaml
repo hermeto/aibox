@@ -11,7 +11,7 @@ helmCharts:
     namespace: gpu-system
     valuesInline:
       image:
-        tag: 4.6.0-4.8.3-distroless
+        tag: 4.6.0-4.8.3-distroless@sha256:613ab03c11d442fd960ff515f547e9921537454a712d08160bc8f677f89f1c35
       serviceMonitor:
         enabled: false
       tolerations:
