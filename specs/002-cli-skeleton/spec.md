@@ -8,6 +8,18 @@
 
 **Input**: User description: "The `aibox` command-line interface skeleton: command framework with consistent flags, YAML profiles validated against a JSON Schema, `aibox doctor` preflight checks for local and AWS profiles (read-only), and Makefile wrappers (playbook §6, feature 002)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: Which exit codes does the CLI use? → A: 0 success; 1 runtime failure (including any doctor `fail` and invalid profiles); 2 command not implemented yet; 64 usage error (unknown flag/argument, `EX_USAGE`). (decided by agent: spec mandates 2 for not-implemented, so usage errors need a distinct, conventional code)
+- Q: Where do tool minimum versions live — in the profile or in the CLI? → A: In the CLI, per provider (`kind` vs `aws`), listed in the doctor contract; profiles only carry environment data. (decided by agent: simplest; avoids every profile repeating the same tool list)
+- Q: Which tools does the `local` profile require? → A: docker, kind, kubectl, helm (required); `kustomize` is not required because `kubectl` embeds it. AWS profiles require tofu or terraform, kubectl, helm. (decided by agent: matches what features 003/004 shell out to)
+- Q: What are the local resource thresholds? → A: Profile fields `minCPUs` (fail below) and `recommendedMemoryGiB`/`minMemoryGiB` (warn below recommended, fail below minimum); `local.yaml` uses 4 CPUs, 8 GiB recommended, 6 GiB minimum. (decided by agent: matches the 4-CPU/8-GB CI runner target of feature 003)
+- Q: How are GPU quota requirements computed? → A: For each GPU class, required vCPUs = `maxNodes` × vCPUs of the largest listed instance type (from EC2 DescribeInstanceTypes); classes are summed per quota (G/VT vs P family × on-demand vs spot). Classes using an EC2 Capacity Block skip the quota check with an informational `pass`. (decided by agent: conservative, read-only, uses AWS's own vCPU counts)
+- Q: How is "no credentials" detected? → A: The default AWS credential chain fails to resolve credentials (no API call made); then every AWS check is `skip` with "no credentials". (decided by agent: never calls AWS without credentials; works in CI)
+- Q: How does `--profile` resolve? → A: A value containing `/` or ending in `.yaml`/`.yml` is a file path; otherwise `profiles/<name>.yaml` relative to the repository root (found by walking up to `go.mod`/`.git`) or `$AIBOX_PROFILES_DIR`. (decided by agent: works from any subdirectory and for custom profiles)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Discoverable, consistent commands (Priority: P1)
