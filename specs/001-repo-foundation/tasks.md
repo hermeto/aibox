@@ -38,6 +38,7 @@ actionlint, goreleaser check).
 - [ ] T016 [US2] `.github/workflows/ci.yml`: lint, test, pr-title, dco, dependency-review, trivy, ci-gate
 - [ ] T017 [P] [US2] `.github/rulesets/main.json`, `.github/labels.yml`, `.github/workflows/labels.yml`
 - [ ] T018 [P] [US2] `hack/github/setup-repo.sh` (settings, security, ruleset, labels, milestones)
+- [ ] T028 [US2] `hack/ci/check-action-pins.sh` + `make lint-pins` (fails on any `uses:` not pinned to a 40-char SHA with a version comment) — covers SC-005/FR-011
 - [ ] T019 [P] [US2] `docs/adr/0000-record-architecture-decisions.md`, `docs/adr/template.md`, `docs/adr/README.md`
 
 ## Phase 5: User Story 3 — security reporter (P1)
@@ -59,6 +60,10 @@ actionlint, goreleaser check).
 
 - [ ] T026 Run `make lint test`, `actionlint`, `pre-commit run --all-files`, `goreleaser check`
 - [ ] T027 Update docs/agent/PROGRESS.md
+
+## Analysis log
+
+`/speckit-analyze` pass 1 (2026-11-05): 1 HIGH finding — SC-005/FR-011 (actions pinned by SHA) had no enforcing task → added T028. No CRITICAL findings; coverage 13/13 FR, 5/5 SC. Pass 2: clean.
 
 ## Dependencies
 
