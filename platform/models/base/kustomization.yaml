@@ -1,0 +1,7 @@
+# Namespace of the model weight lifecycle: the identity of the sync Jobs that `aibox models
+# sync` runs, and (per overlay) the Hugging Face token and the local object store.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: aibox-models
+resources:
+  - serviceaccount.yaml

@@ -1,0 +1,21 @@
+# Hugging Face token for gated models, read from the ClusterSecretStore "aibox" (key
+# aibox/aibox-local/hf-token). The token is optional: when the key does not exist the Secret is
+# removed (deletionPolicy Delete) and the sync Jobs download anonymously.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: hf-token
+  namespace: aibox-models
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aibox
+  target:
+    name: hf-token
+    creationPolicy: Owner
+    deletionPolicy: Delete
+  data:
+    - secretKey: token
+      remoteRef:
+        key: aibox/aibox-local/hf-token

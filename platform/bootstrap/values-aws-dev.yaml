@@ -4,8 +4,14 @@ apps:
   - name: karpenter
     namespace: karpenter
     syncWave: -1
+  - name: secrets
+    namespace: external-secrets
+    syncWave: -1
   - name: gpu
     namespace: gpu-system
     syncWave: 0
     # Adds the run's run-id tag to Karpenter-launched instances (orphan check, cost).
     tagNodeClassesWithRunId: true
+  - name: models
+    namespace: aibox-models
+    syncWave: 0

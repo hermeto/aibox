@@ -1,5 +1,11 @@
 profile: local
 apps:
+  - name: secrets
+    namespace: external-secrets
+    syncWave: -1
+  - name: models
+    namespace: aibox-models
+    syncWave: 0
   - name: serving
     namespace: aibox-serving
     syncWave: 10
