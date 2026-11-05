@@ -1,0 +1,9 @@
+{
+  "Exclude": [
+    "^\\.specify/",
+    "^\\.claude/skills/",
+    "^bin/",
+    "^LICENSE$",
+    "^docs/agent/PLAYBOOK\\.md$"
+  ]
+}

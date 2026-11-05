@@ -1,0 +1,17 @@
+config:
+  default: true
+  MD013: false            # line length: long tables and URLs are fine
+  MD024:
+    siblings_only: true   # repeated per-feature subheadings are fine
+  MD033: false            # inline HTML (badges, <details>) is allowed
+  MD041: false            # first line need not be a top-level heading (templates)
+  MD060: false            # table column style: alignment is not enforced
+globs:
+  - "**/*.md"
+ignores:
+  - "node_modules/**"
+  - "bin/**"
+  - ".specify/**"
+  - ".claude/**"
+  - "docs/agent/PLAYBOOK.md"
+  - "CHANGELOG.md"
