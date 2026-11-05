@@ -7,9 +7,9 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 004-aws-infrastructure |
-| Spec Kit phase | implement + converge done; waiting for CI on PR #6 |
-| Last commit | see `git log -1` on `004-aws-infrastructure` |
+| Current feature | 005-cost-guardrails |
+| Spec Kit phase | implement + converge done; waiting for CI on PR #7 |
+| Last commit | see `git log -1` on `005-cost-guardrails` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
@@ -18,6 +18,7 @@
 2. [#4](https://github.com/hermeto/aibox/pull/4) `002-cli-skeleton` → `001-repo-foundation`
 3. [#5](https://github.com/hermeto/aibox/pull/5) `003-local-platform` → `002-cli-skeleton`
 4. [#6](https://github.com/hermeto/aibox/pull/6) `004-aws-infrastructure` → `003-local-platform`
+5. [#7](https://github.com/hermeto/aibox/pull/7) `005-cost-guardrails` → `004-aws-infrastructure`
 
 ## Blockers / `needs-human`
 
@@ -88,3 +89,9 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
    the container: providers come from releases.hashicorp.com into a filesystem mirror and
    modules through a throwaway local registry shim (scratchpad only, never committed). CI
    uses the real registries.
+10. **Provider lock files.** OpenTofu's registry packages hash differently from
+    releases.hashicorp.com, so lock files are taken from CI: `make terraform-check` fails and
+    prints the registry-generated lock when it is missing or stale (`hack/check-tf-lock.sh`).
+11. **Price table.** `data/pricing/aws-us-east-1.yaml` ships representative prices marked
+    `verified: false` (no Price List API access from the container); `go run ./hack/pricing`
+    refreshes them, and doctor warns until then.
