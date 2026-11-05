@@ -1,0 +1,10 @@
+# KServe LLMInferenceService and Gateway API Inference Extension CRDs.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmCharts:
+  - name: kserve-llmisvc-crd
+    repo: oci://ghcr.io/kserve/charts
+    version: v0.21.0
+    releaseName: kserve-llmisvc-crd
+    namespace: kserve
+    includeCRDs: true
