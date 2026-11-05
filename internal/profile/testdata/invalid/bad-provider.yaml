@@ -1,0 +1,7 @@
+apiVersion: aibox.dev/v1alpha1
+kind: Profile
+metadata: {name: bad-provider}
+spec:
+  provider: gcp
+  cluster: {name: x, kubernetesVersion: "1.34"}
+  guardrails: {ttl: 4h}

@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../schemas/profile.schema.json
+apiVersion: aibox.dev/v1alpha1
+kind: Profile
+metadata:
+  name: local
+  description: kind cluster on a laptop or CI runner; no GPU (llm-d inference simulator).
+spec:
+  provider: kind
+  cluster:
+    name: aibox-local
+    kubernetesVersion: "1.34"
+  local:
+    minCPUs: 4
+    minMemoryGiB: 6
+    recommendedMemoryGiB: 8
+  guardrails:
+    ttl: 24h

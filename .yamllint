@@ -3,6 +3,7 @@ ignore: |
   bin/
   node_modules/
   .specify/
+  internal/profile/testdata/invalid/not-yaml.yaml
 rules:
   braces:
     max-spaces-inside: 1

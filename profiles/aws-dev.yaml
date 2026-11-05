@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../schemas/profile.schema.json
+apiVersion: aibox.dev/v1alpha1
+kind: Profile
+metadata:
+  name: aws-dev
+  description: Cheap iteration on EKS with 1–2 L4 spot GPUs (8B models).
+spec:
+  provider: aws
+  cluster:
+    name: aibox-dev
+    kubernetesVersion: "1.34"
+  aws:
+    region: us-east-1
+    gpuClasses:
+      - name: gpu-l4
+        instanceTypes: [g6.xlarge, g6.2xlarge]
+        capacityType: spot
+        maxNodes: 2
+  guardrails:
+    ttl: 4h
