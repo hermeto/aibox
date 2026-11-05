@@ -8,6 +8,22 @@
 
 **Input**: User description: "AWS infrastructure as code for the aws-dev and aws-bench profiles: Terraform (OpenTofu-tested) for VPC (3 AZs), EKS (latest supported), a small on-demand CPU system node group, EKS Pod Identity associations, an S3 bucket for model weights, outputs consumed by the GitOps layer, tags on everything, CI validation without credentials, a remote-state bootstrap stack and a first-run runbook; `aibox up/down --profile aws-*` drive it (playbook §6, feature 004)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: Which Kubernetes version is "latest supported" on EKS? → A: 1.35 (newest version in eksctl v0.231.0's supported list; AWS documentation was not reachable from the build environment). The runbook tells the operator to confirm with `aws eks describe-cluster-versions` and bump the profiles if a newer version is available. (decided by agent: best verifiable source available)
+- Q: Upstream modules or hand-rolled resources? → A: `terraform-aws-modules/vpc` v6.7.3, `terraform-aws-modules/eks` v21.29.0 and its `karpenter` submodule, referenced as git sources pinned to release tags; AIBox-owned modules for storage and Pod Identity roles. (decided by agent: plan input prefers the community modules; git tags work wherever GitHub is reachable and Dependabot updates them)
+- Q: Which platform components get AWS identities? → A: Karpenter (controller role, node role, interruption queue via the EKS module's karpenter submodule), External Secrets (read secrets under `aibox/<cluster>/*`), the OpenTelemetry collector (read-only EC2 tags/instances for cost attribution), the model sync job (read/write the weights bucket) and model servers (read the weights bucket). KEDA gets none: it only uses the in-cluster Prometheus scaler. (decided by agent: least privilege, NFR-3; an identity with no permissions is noise)
+- Q: How is the EKS public endpoint protected? → A: Public endpoint access is limited to the operator's egress IP (/32), detected by the CLI at `up` time (override with `--admin-cidr`). (decided by agent: secure by default without a VPN; no wildcard CIDR in code)
+- Q: How is the weights bucket encrypted? → A: SSE-KMS with a dedicated customer-managed key (rotation on, S3 bucket key on to limit KMS request cost), versioning on, all public access blocked, TLS-only bucket policy. (decided by agent: customer-managed keys satisfy Trivy's HIGH S3 checks; bucket keys keep cost negligible)
+- Q: NAT gateways? → A: One shared NAT gateway. (decided by agent: production HA is out of scope (§A.2); saves ~USD 65/month per extra NAT)
+- Q: System node group size? → A: Managed node group, on-demand `m7i.xlarge`, min 2 / desired 2 / max 3. (decided by agent: room for Argo CD, Karpenter, gateway, observability and KEDA with headroom)
+- Q: Where do run ID, owner and generated files live? → A: The CLI creates a run ID (`<profile>-<UTC yyyymmddhhmm>-<4 hex>`) on the first `up` and reuses it until `down`; owner is `--owner`, else the profile's `ownerEmail`, else `git config user.email`; inputs and outputs go to `.aibox/<profile>/` (git-ignored). (decided by agent: stable tags across re-runs; nothing account-specific in git)
+- Q: Remote state naming and locking? → A: Bucket `aibox-tfstate-<account>-<region>` (override with `AIBOX_TF_STATE_BUCKET`), key `<profile>/<cluster>.tfstate`, S3 native locking (`use_lockfile = true`). (decided by agent: no DynamoDB table; supported by Terraform ≥ 1.10 and OpenTofu ≥ 1.10)
+- Q: Which engine does the CLI run? → A: `tofu` if installed, else `terraform`; CI tests with OpenTofu. (decided by agent: the playbook targets OpenTofu while keeping Terraform compatibility)
+- Q: Does `up` for AWS also bootstrap GitOps? → A: Yes: after apply it writes a kubeconfig context (`aibox-<profile>`, token via `aws eks get-token`), installs Argo CD and the root Application for `values-<profile>.yaml` (components arrive with features 006+), reusing the local bootstrap code. (decided by agent: one bring-up path for every profile)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - One command creates the AWS environment (Priority: P1)
