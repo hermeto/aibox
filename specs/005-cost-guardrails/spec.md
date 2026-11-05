@@ -8,6 +8,19 @@
 
 **Input**: User description: "Cost guardrails so that no AIBox cloud run can silently keep spending money: mandatory budget and TTL for cloud runs, a run-scoped AWS Budget with alerts, a TTL teardown that works with the operator's laptop off, an orphan check after `down`, `aibox cost` for the current run, and a cost estimate in `aibox doctor` from a versioned price table (playbook §6, feature 005)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: What executes the TTL teardown when the laptop is off? → A: An EventBridge Scheduler one-time schedule (`at(expiry)`, deleted after completion) starts an AWS CodeBuild project whose buildspec installs the pinned OpenTofu, clones the public repository at the run's commit, writes the run's inputs from environment variables and runs `tofu destroy` on the main stack, then on the guardrails stack. Failures publish to the run's SNS alert topic (the same e-mail as the budget). (decided by agent: simplest reliable executor; Lambda's 15-minute limit is too short for an EKS destroy; an in-cluster CronJob would die with the cluster — rationale in ADR-0010)
+- Q: Where do guardrail resources live? → A: A separate Terraform stack `infra/terraform/aws/guardrails` with its own state key (`<profile>/<cluster>-guardrails.tfstate`), applied before the main stack and destroyed after it. (decided by agent: the TTL exists even if the main apply fails half-way, and the teardown never destroys itself mid-run)
+- Q: How is the budget scoped to one run? → A: `aws_budgets_budget` with a `TagKeyValue` filter `user:run-id$<run-id>` and three ACTUAL-cost notifications (50/80/100%) to the alert e-mail via SNS. The `run-id` tag must be activated once as a cost allocation tag (runbook). (decided by agent: AWS Budgets' supported way to scope by tag)
+- Q: Where does the alert e-mail come from? → A: `--notify-email`, else the profile's `guardrails.ownerEmail`; otherwise `up` stops. (decided by agent: alerts must reach a person)
+- Q: How does `aibox ttl extend` move the TTL? → A: It re-applies the guardrails stack with the new `ttl_expires_at` and updates `.aibox/<profile>/run.json`; total lifetime ≤ 24 h after the run start. (decided by agent: one code path, state stays in Terraform)
+- Q: How is the price table populated without Price List API access from the build environment? → A: `data/pricing/aws-us-east-1.yaml` ships representative prices with `verified: false`, its source and date; `go run ./hack/pricing` refreshes on-demand prices from the AWS Price List API and spot prices from the EC2 spot price history and sets `verified: true`. Doctor warns while the table is unverified or older than 90 days. (decided by agent: honest about provenance; the maintainer refreshes before a campaign)
+- Q: How does `aibox cost` measure usage? → A: EC2 instances tagged with the run ID (running or stopped) × hours since launch × price (spot vs on-demand from the instance lifecycle), plus fixed hourly items (EKS control plane, NAT gateway) since the run start; it is an estimate and says so. (decided by agent: live, read-only, no Cost Explorer lag)
+- Q: How are orphans detected? → A: Per-service read-only describe calls filtered by `tag:run-id` (EC2 instances not terminated, EBS volumes, snapshots owned by the account, ENIs, Elastic IPs, NAT gateways not deleted) and Elastic Load Balancing v2 load balancers whose tags carry the run ID (Kubernetes adds the cluster tag; the AWS Load Balancer Controller propagates `run-id` via default tags in feature 009). Fixtures are recorded API responses in `testdata/`. (decided by agent: tag-API results can lag; describe calls show the current state)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - No cloud run without a budget and a TTL (Priority: P1)
