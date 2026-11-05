@@ -1,0 +1,50 @@
+# Weekly, grouped dependency updates with Conventional Commit prefixes.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      go: { patterns: ["*"] }
+    commit-message: { prefix: "build(deps)" }
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions: { patterns: ["*"] }
+    commit-message: { prefix: "ci(deps)" }
+    labels: [dependencies, area/ci]
+
+  - package-ecosystem: uv
+    directory: /report
+    schedule: { interval: weekly, day: monday }
+    groups:
+      python: { patterns: ["*"] }
+    commit-message: { prefix: "build(deps)" }
+    labels: [dependencies, area/report]
+
+  - package-ecosystem: docker
+    directories: ["/", "/hack/images/*"]
+    schedule: { interval: weekly, day: monday }
+    groups:
+      images: { patterns: ["*"] }
+    commit-message: { prefix: "build(deps)" }
+    labels: [dependencies]
+
+  - package-ecosystem: terraform
+    directories: ["/infra/terraform/aws", "/infra/terraform/aws/modules/*", "/infra/terraform/aws/bootstrap"]
+    schedule: { interval: weekly, day: monday }
+    groups:
+      terraform: { patterns: ["*"] }
+    commit-message: { prefix: "build(deps)" }
+    labels: [dependencies, area/infra]
+
+  - package-ecosystem: helm
+    directories: ["/platform/**"]
+    schedule: { interval: weekly, day: monday }
+    groups:
+      charts: { patterns: ["*"] }
+    commit-message: { prefix: "build(deps)" }
+    labels: [dependencies]
