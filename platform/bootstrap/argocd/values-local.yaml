@@ -2,7 +2,9 @@
 # (chart argo-cd 10.12.1, Argo CD v3.6.1). Images are pinned by digest.
 global:
   image:
-    tag: v3.6.1
+    # Index digest read from the first e2e-local run (quay.io is unreachable from the agent's
+    # build environment; see specs/003-local-platform/research.md R3).
+    tag: v3.6.1@sha256:296e3d74f449b2ce45265613fcb68c18ed7366488360c8ea32f5f2a93d2e5c54
 dex:
   enabled: false
 notifications:
