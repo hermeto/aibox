@@ -1,0 +1,20 @@
+extends: default
+ignore: |
+  bin/
+  node_modules/
+  .specify/
+rules:
+  braces:
+    max-spaces-inside: 1
+  brackets:
+    max-spaces-inside: 1
+  line-length: disable
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false", "on"]
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/hermeto/aibox/discussions
+    about: Ask and answer questions in GitHub Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/hermeto/aibox/security/advisories/new
+    about: Please report security issues privately (see SECURITY.md).
