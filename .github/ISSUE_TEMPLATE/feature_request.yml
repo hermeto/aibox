@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a new capability or experiment for AIBox.
+labels: ["kind/feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem would this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should AIBox do? How would we measure that it helps (constitution principle I)?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Release scope
+      options: [v1.0, v2 (roadmap), not sure]
+    validations:
+      required: true

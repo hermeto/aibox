@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in AIBox does not work as documented.
+labels: ["kind/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report! Please never paste credentials, API keys or account IDs.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the exact command and its output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Profile
+      options: [local, aws-dev, aws-bench, not applicable]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: AIBox version or commit
+      placeholder: "output of `aibox version` or git SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS/arch, Docker resources, Kubernetes version, relevant tool versions (`aibox doctor --output json`).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
