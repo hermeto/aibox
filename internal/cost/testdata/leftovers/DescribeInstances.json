@@ -1,0 +1,6 @@
+{"Reservations":[{"Instances":[
+  {"InstanceId":"i-0bbbbbbbbbbbbbbb1","InstanceType":"g6.xlarge","InstanceLifecycle":"spot","State":{"Name":"running"},"LaunchTime":"2026-11-05T00:30:00Z"},
+  {"InstanceId":"i-0bbbbbbbbbbbbbbb2","InstanceType":"m7i.xlarge","State":{"Name":"running"},"LaunchTime":"2026-11-05T00:00:00Z"},
+  {"InstanceId":"i-0bbbbbbbbbbbbbbb3","InstanceType":"x9.mystery","State":{"Name":"stopped"},"LaunchTime":"2026-11-05T01:00:00Z"},
+  {"InstanceId":"i-0bbbbbbbbbbbbbbb4","InstanceType":"g6.xlarge","State":{"Name":"terminated"},"LaunchTime":"2026-11-05T00:00:00Z"}
+]}]}

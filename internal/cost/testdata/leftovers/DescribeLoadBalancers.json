@@ -1,0 +1,1 @@
+{"LoadBalancers":[{"LoadBalancerArn":"arn:aws:elasticloadbalancing:us-east-1:000000000000:loadbalancer/net/k8s-aibox-gw/1"}]}

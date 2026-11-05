@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
@@ -103,4 +104,13 @@ func (c *Client) EC2Quotas(ctx context.Context) (map[string]float64, error) {
 		}
 	}
 	return out, nil
+}
+
+// CostClients returns read-only EC2 and ELBv2 clients for the orphan checker and `aibox cost`.
+func CostClients(ctx context.Context, region string) (*ec2.Client, *elbv2.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		return nil, nil, fmt.Errorf("load AWS config: %w", err)
+	}
+	return ec2.NewFromConfig(cfg), elbv2.NewFromConfig(cfg), nil
 }
