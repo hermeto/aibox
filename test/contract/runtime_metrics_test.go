@@ -2,7 +2,7 @@
 // against metric samples of the pinned vLLM and SGLang versions, and against a live model
 // server when AIBOX_METRICS_URL is set (CI runs it against the simulator after e2e-local):
 //
-//	AIBOX_METRICS_URL=http://127.0.0.1:30080/metrics go test ./test/contract/... -run TestRuntimeMetrics
+//	AIBOX_METRICS_URL=http://127.0.0.1:30082/metrics go test ./test/contract/... -run TestRuntimeMetrics
 //
 // AIBOX_METRICS_RUNTIME selects the runtime names of the live server (default vllm).
 package contract

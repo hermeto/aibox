@@ -121,7 +121,7 @@ jobs:
         run: go test -tags e2e ./test/e2e/... -run TestLocalPlatform -timeout 30m -count=1 -v
       - name: Runtime metric contract (simulator served by KServe)
         env:
-          AIBOX_METRICS_URL: http://127.0.0.1:30080/metrics
+          AIBOX_METRICS_URL: http://127.0.0.1:30082/metrics
         run: go test ./test/contract/... -run TestRuntimeMetrics -count=1 -v
       - name: Running images (digests)
         if: always()
@@ -139,6 +139,9 @@ jobs:
           kubectl --context kind-aibox-local -n aibox-models logs deploy/seaweedfs --tail=50 || true
           kubectl --context kind-aibox-local get llminferenceservices -A -o yaml || true
           kubectl --context kind-aibox-local -n kserve logs deploy/llmisvc-controller-manager --tail=100 || true
+          kubectl --context kind-aibox-local get gateways,httproutes,aigatewayroutes,securitypolicies,backendtrafficpolicies -A -o yaml || true
+          kubectl --context kind-aibox-local -n envoy-gateway-system logs deploy/envoy-gateway --tail=100 || true
+          kubectl --context kind-aibox-local -n envoy-ai-gateway-system logs deploy/ai-gateway-controller --tail=100 || true
       - name: down
         if: always()
         run: go run ./cmd/aibox down --profile local
