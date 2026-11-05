@@ -145,7 +145,7 @@ lint-editorconfig: $(EC) ## Check EditorConfig compliance
 	$(EC)
 
 TF      ?= tofu
-TF_DIRS := infra/terraform/aws infra/terraform/aws/bootstrap
+TF_DIRS := infra/terraform/aws infra/terraform/aws/bootstrap infra/terraform/aws/guardrails
 
 .PHONY: terraform-check
 terraform-check: ## Terraform/OpenTofu: fmt, validate and mocked tests (no credentials)

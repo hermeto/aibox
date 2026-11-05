@@ -56,6 +56,19 @@ module "eks" {
   enable_irsa       = false
   enabled_log_types = ["api", "audit", "authenticator"]
 
+  # The TTL teardown job (guardrails stack) drains the cluster before destroying it.
+  access_entries = var.teardown_role_arn == "" ? {} : {
+    teardown = {
+      principal_arn = var.teardown_role_arn
+      policy_associations = {
+        admin = {
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  }
+
   addons = {
     coredns                = {}
     kube-proxy             = {}

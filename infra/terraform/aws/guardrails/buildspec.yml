@@ -1,0 +1,59 @@
+# AIBox TTL teardown (runs in AWS CodeBuild, started by EventBridge Scheduler at expiry).
+# Destroys the run's main stack, then the guardrails stack. Inputs come from environment
+# variables set by infra/terraform/aws/guardrails/main.tf.
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - base="https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}"
+      - curl -fsSLo "tofu_${TOFU_VERSION}_linux_amd64.zip" "${base}/tofu_${TOFU_VERSION}_linux_amd64.zip"
+      - curl -fsSLo SHA256SUMS "${base}/tofu_${TOFU_VERSION}_SHA256SUMS"
+      - grep " tofu_${TOFU_VERSION}_linux_amd64.zip$" SHA256SUMS | sha256sum -c -
+      - unzip -q "tofu_${TOFU_VERSION}_linux_amd64.zip" tofu -d /usr/local/bin
+      - curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      - echo "$(curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256")  /usr/local/bin/kubectl" | sha256sum -c -
+      - chmod +x /usr/local/bin/kubectl
+  pre_build:
+    commands:
+      - git clone --filter=blob:none "$REPO_URL" aibox
+      - git -C aibox checkout --quiet "$REVISION"
+      - echo "$AIBOX_TFVARS_B64" | base64 -d > aibox/infra/terraform/aws/terraform.tfvars.json
+      # Drain what controllers created outside Terraform (load balancers, Karpenter nodes).
+      - |
+        if aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION_NAME"; then
+          kubectl -n argocd scale deployment,statefulset --all --replicas=0 || true
+          kubectl delete nodepools.karpenter.sh --all --ignore-not-found --wait=true --timeout=10m || true
+          kubectl get svc -A -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' |
+            while read -r ns name; do [ -n "$name" ] && kubectl -n "$ns" delete svc "$name" --wait=true --timeout=5m || true; done
+        fi
+  build:
+    commands:
+      - cd aibox/infra/terraform/aws
+      - tofu init -input=false -backend-config="bucket=${STATE_BUCKET}" -backend-config="key=${MAIN_STATE_KEY}" -backend-config="region=${AWS_REGION_NAME}"
+      - |
+        for attempt in 1 2 3; do
+          tofu destroy -auto-approve -input=false -lock-timeout=10m -var-file=terraform.tfvars.json && break
+          [ "$attempt" = 3 ] && exit 1
+          sleep 120
+        done
+      - cd guardrails
+      - tofu init -input=false -backend-config="bucket=${STATE_BUCKET}" -backend-config="key=${GUARDRAILS_STATE_KEY}" -backend-config="region=${AWS_REGION_NAME}"
+      - >-
+        tofu destroy -auto-approve -input=false -lock-timeout=10m
+        -var "main_tfvars_json=$(cat ../terraform.tfvars.json)"
+        -var "state_bucket=${STATE_BUCKET}" -var "main_state_key=${MAIN_STATE_KEY}"
+        -var "guardrails_state_key=${GUARDRAILS_STATE_KEY}" -var "repo_url=${REPO_URL}"
+        -var "revision=${REVISION}" -var "ttl_expires_at=${TF_VAR_ttl_expires}"
+  post_build:
+    commands:
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING}" != "1" ]; then
+          aws sns publish --region "$AWS_REGION_NAME" --topic-arn "$ALERT_TOPIC_ARN" \
+            --subject "AIBox TTL teardown FAILED for ${CLUSTER_NAME}" \
+            --message "The automatic teardown failed. Run 'aibox down' and check the CodeBuild logs: ${CODEBUILD_BUILD_URL}"
+        fi
