@@ -3,7 +3,7 @@
 - Envoy Gateway v1.9.3 (latest tag 2026-11-05). `SecurityPolicy.apiKeyAuth`
   (`api/v1alpha1/api_key_auth_types.go`): `credentialRefs` (Secrets: key = client id,
   value = API key), `extractFrom[].headers`, `forwardClientIDHeader`, `sanitize`. Envoy's
-  `api_key_auth` filter strips a `Bearer ` prefix from the header value
+  `api_key_auth` filter strips a "Bearer " prefix from the header value
   (`api/envoy/extensions/filters/http/api_key_auth/v3/api_key_auth.proto`), so OpenAI clients'
   `Authorization: Bearer <key>` works. Rate limits (`ratelimit_types.go`): `global`/`local`
   rules with `clientSelectors`, `limit`, `cost` (request/response, from metadata) and `shared`;

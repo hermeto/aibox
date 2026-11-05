@@ -31,12 +31,16 @@ git clone https://github.com/hermeto/aibox && cd aibox
 make build
 ./bin/aibox doctor --profile local      # checks tools and Docker resources
 ./bin/aibox up --profile local          # kind + Argo CD + app-of-apps (~5 minutes)
-curl -s http://127.0.0.1:30080/v1/chat/completions -H 'Content-Type: application/json' \
-  -d '{"model":"sim-llama-8b","messages":[{"role":"user","content":"Hello"}]}'
+curl -s http://127.0.0.1:30080/v1/chat/completions -H "Authorization: Bearer $(cat .aibox/local/api-key)" \
+  -H 'Content-Type: application/json' -d '{"model":"sim-llama-8b","messages":[{"role":"user","content":"Hello"}]}'
 ./bin/aibox smoke --profile local       # models, one completion per model, metrics
 ./bin/aibox models sync --profile local --model tiny-random-llama  # mirror + verify weights
 ./bin/aibox down --profile local        # deletes the cluster
 ```
+
+The endpoint is the inference gateway ([ADR-0003](docs/adr/0003-gateway-implementation.md)): an
+OpenAI-compatible API with API keys and per-key rate limits; `aibox up` creates a key for you
+in `.aibox/<profile>/api-key` ([docs/runbooks/gateway.md](docs/runbooks/gateway.md)).
 
 Argo CD tracks your current branch on `origin`; push first, or use `--from-worktree` to apply
 unpushed changes. The Argo CD UI is at <http://127.0.0.1:30081> (user `admin`).
