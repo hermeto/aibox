@@ -11,55 +11,55 @@ actionlint, goreleaser check).
 
 ## Phase 1: Setup
 
-- [ ] T001 Initialize Go module `github.com/hermeto/aibox` (`go 1.27.3`) in go.mod
-- [ ] T002 [P] Add placeholder `cmd/aibox/main.go` and `cmd/aibox/main_test.go`
-- [ ] T003 [P] Add linter configs `.golangci.yml`, `.markdownlint-cli2.yaml` (MD013 off, MD024 siblings_only), `.yamllint`
+- [X] T001 Initialize Go module `github.com/hermeto/aibox` (`go 1.27.3`) in go.mod
+- [X] T002 [P] Add placeholder `cmd/aibox/main.go` and `cmd/aibox/main_test.go`
+- [X] T003 [P] Add linter configs `.golangci.yml`, `.markdownlint-cli2.yaml` (MD013 off, MD024 siblings_only), `.yamllint`
 
 ## Phase 2: Foundational
 
-- [ ] T004 Makefile with `help`, `tools`, `dev-setup`, `lint` (+ `lint-*`), `fmt`, `test`; pinned tool versions
-- [ ] T005 [P] `hack/dev-setup.sh` (Linux/macOS, no Homebrew required)
-- [ ] T006 [P] `.pre-commit-config.yaml` with local hooks calling `make lint-*`
+- [X] T004 Makefile with `help`, `tools`, `dev-setup`, `lint` (+ `lint-*`), `fmt`, `test`; pinned tool versions
+- [X] T005 [P] `hack/dev-setup.sh` (Linux/macOS, no Homebrew required)
+- [X] T006 [P] `.pre-commit-config.yaml` with local hooks calling `make lint-*`
 
 ## Phase 3: User Story 1 — contributor (P1)
 
-- [ ] T007 [P] [US1] CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
-- [ ] T008 [P] [US1] CONTRIBUTING.md (dev setup, Spec Kit loop, branches/PRs, DCO, Conventional Commits)
-- [ ] T009 [P] [US1] SUPPORT.md, GOVERNANCE.md, MAINTAINERS.md, .github/CODEOWNERS
-- [ ] T010 [P] [US1] Issue forms `.github/ISSUE_TEMPLATE/{bug_report,feature_request,docs}.yml` + `config.yml`
-- [ ] T011 [P] [US1] `.github/PULL_REQUEST_TEMPLATE.md` with playbook §5.3 sections
-- [ ] T012 [US1] README links to every governance/config file
+- [X] T007 [P] [US1] CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
+- [X] T008 [P] [US1] CONTRIBUTING.md (dev setup, Spec Kit loop, branches/PRs, DCO, Conventional Commits)
+- [X] T009 [P] [US1] SUPPORT.md, GOVERNANCE.md, MAINTAINERS.md, .github/CODEOWNERS
+- [X] T010 [P] [US1] Issue forms `.github/ISSUE_TEMPLATE/{bug_report,feature_request,docs}.yml` + `config.yml`
+- [X] T011 [P] [US1] `.github/PULL_REQUEST_TEMPLATE.md` with playbook §5.3 sections
+- [X] T012 [US1] README links to every governance/config file
 
 ## Phase 4: User Story 2 — maintainer quality gates (P1)
 
-- [ ] T013 [US2] Test first: `hack/ci/dco-check_test.sh` covering signed, unsigned, mismatched-email and merge commits
-- [ ] T014 [US2] `hack/ci/dco-check.sh` passes T013
-- [ ] T015 [US2] `hack/ci/ci-gate.sh` (results JSON → pass/fail, allowed-skip list)
-- [ ] T016 [US2] `.github/workflows/ci.yml`: lint, test, pr-title, dco, dependency-review, trivy, ci-gate
-- [ ] T017 [P] [US2] `.github/rulesets/main.json`, `.github/labels.yml`, `.github/workflows/labels.yml`
-- [ ] T018 [P] [US2] `hack/github/setup-repo.sh` (settings, security, ruleset, labels, milestones)
-- [ ] T028 [US2] `hack/ci/check-action-pins.sh` + `make lint-pins` (fails on any `uses:` not pinned to a 40-char SHA with a version comment) — covers SC-005/FR-011
-- [ ] T019 [P] [US2] `docs/adr/0000-record-architecture-decisions.md`, `docs/adr/template.md`, `docs/adr/README.md`
+- [X] T013 [US2] Test first: `hack/ci/dco-check_test.sh` covering signed, unsigned, mismatched-email and merge commits
+- [X] T014 [US2] `hack/ci/dco-check.sh` passes T013
+- [X] T015 [US2] `hack/ci/ci-gate.sh` (results JSON → pass/fail, allowed-skip list)
+- [X] T016 [US2] `.github/workflows/ci.yml`: lint, test, pr-title, dco, dependency-review, trivy, ci-gate
+- [X] T017 [P] [US2] `.github/rulesets/main.json`, `.github/labels.yml`, `.github/workflows/labels.yml`
+- [X] T018 [P] [US2] `hack/github/setup-repo.sh` (settings, security, ruleset, labels, milestones)
+- [X] T028 [US2] `hack/ci/check-action-pins.sh` + `make lint-pins` (fails on any `uses:` not pinned to a 40-char SHA with a version comment) — covers SC-005/FR-011
+- [X] T019 [P] [US2] `docs/adr/0000-record-architecture-decisions.md`, `docs/adr/template.md`, `docs/adr/README.md`
 
 ## Phase 5: User Story 3 — security reporter (P1)
 
-- [ ] T020 [P] [US3] SECURITY.md with private vulnerability reporting and response targets
-- [ ] T021 [P] [US3] `.github/workflows/codeql.yml` (go, actions) and `.github/workflows/scorecard.yml`
-- [ ] T022 [P] [US3] `.github/dependabot.yml` (gomod, uv/pip, github-actions, docker, terraform, helm; grouped weekly)
+- [X] T020 [P] [US3] SECURITY.md with private vulnerability reporting and response targets
+- [X] T021 [P] [US3] `.github/workflows/codeql.yml` (go, actions) and `.github/workflows/scorecard.yml`
+- [X] T022 [P] [US3] `.github/dependabot.yml` (gomod, uv/pip, github-actions, docker, terraform, helm; grouped weekly)
 
 ## Phase 6: User Story 4 — releases (P2)
 
-- [ ] T023 [US4] `release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release-please.yml`
-- [ ] T024 [US4] `.goreleaser.yaml` (darwin/linux × amd64/arm64, ldflags, syft SBOM, cosign keyless) and `.github/workflows/release.yml` (tags only, attestations)
+- [X] T023 [US4] `release-please-config.json`, `.release-please-manifest.json`, `.github/workflows/release-please.yml`
+- [X] T024 [US4] `.goreleaser.yaml` (darwin/linux × amd64/arm64, ldflags, syft SBOM, cosign keyless) and `.github/workflows/release.yml` (tags only, attestations)
 
 ## Phase 7: User Story 5 — health badges (P2)
 
-- [ ] T025 [US5] README badges (CI, OpenSSF Scorecard, license)
+- [X] T025 [US5] README badges (CI, OpenSSF Scorecard, license)
 
 ## Phase 8: Polish
 
-- [ ] T026 Run `make lint test`, `actionlint`, `pre-commit run --all-files`, `goreleaser check`
-- [ ] T027 Update docs/agent/PROGRESS.md
+- [X] T026 Run `make lint test`, `actionlint`, `pre-commit run --all-files`, `goreleaser check`
+- [X] T027 Update docs/agent/PROGRESS.md
 
 ## Analysis log
 
@@ -68,3 +68,10 @@ actionlint, goreleaser check).
 ## Dependencies
 
 Phase 1 → Phase 2 → stories (US1–US5 independent) → Polish. T013 before T014.
+
+## Convergence log
+
+`/speckit-converge` pass 1 (2026-11-05): 0 findings — every FR/SC and acceptance scenario
+maps to existing files or checks (FR-012 links verified in README and CONTRIBUTING; SC-005
+enforced by `make lint-pins`). `SC-003` (Scorecard run) can only be observed after merge to
+the default branch and is listed under "What was not verified" in the PR.

@@ -7,14 +7,14 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | bootstrap (playbook §4) |
-| Spec Kit phase | constitution ratified (1.0.0) |
-| Last commit | bootstrap commit on `claude/jolly-albattani-wcnudk` (stands in for `main`) |
+| Current feature | 001-repo-foundation |
+| Spec Kit phase | implement + converge done; waiting for CI on PR #1 |
+| Last commit | see `git log -1` on `001-repo-foundation` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
 
-_None yet._
+1. [#1](https://github.com/hermeto/aibox/pull/1) `001-repo-foundation` → `claude/jolly-albattani-wcnudk`
 
 ## Blockers / `needs-human`
 
@@ -37,7 +37,10 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
 | helm | v3 latest (`go install`) | `go install` |
 | golangci-lint | v2.15.0 | `go install` |
 | actionlint | v1.7.12 | `go install` |
-| kubeconform, tflint, tofu, promtool, kubectl, yamllint, shellcheck, markdownlint-cli2, pre-commit, check-jsonschema | see feature 001 PROGRESS | `go install` / `uv tool` / `npm` |
+| editorconfig-checker | v3.11.3 | `make tools` |
+| shellcheck / yamllint / markdownlint-cli2 / pre-commit | 0.11.0 / 1.38.0 / 0.24.0 / 4.7.0 | `make tools`, `uvx`, `npx` |
+| GoReleaser | v2.20.0 | `go run` (`make release-check`) |
+| kubeconform, tflint, tofu, promtool, kubectl | installed when first needed | `go install` / dl.k8s.io |
 | GitHub access | `hermeto` via GitHub MCP tools | `gh` CLI is not usable for GitHub operations in this environment |
 
 ## Run decisions (taken by the agent on the maintainer's behalf)
