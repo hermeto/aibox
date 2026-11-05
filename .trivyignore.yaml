@@ -1,0 +1,19 @@
+# Accepted risks for Trivy findings. Each entry is scoped to a path, explains why the
+# finding is accepted, and expires so it is re-reviewed. Never add a blanket ignore.
+misconfigurations:
+  - id: AWS-0040
+    paths:
+      - "infra/terraform/aws/main.tf"
+    statement: >-
+      EKS public endpoint is required so the operator's laptop can reach the API without a VPN.
+      Access is limited to the operator's egress IP (/32, var.admin_cidrs rejects 0.0.0.0/0) and
+      the private endpoint is also enabled. Re-evaluate if a bastion/VPN path is added.
+    expired_at: 2027-05-01
+  - id: AWS-0104
+    paths:
+      - "infra/terraform/aws/main.tf"
+    statement: >-
+      EKS nodes (terraform-aws-modules/eks default node security group) need unrestricted egress
+      through the NAT gateway to pull images, reach AWS APIs and download model weights.
+      Re-evaluate together with NetworkPolicy/VPC endpoint hardening (NFR-4).
+    expired_at: 2027-05-01

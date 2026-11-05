@@ -4,6 +4,8 @@
     "^\\.claude/skills/",
     "^bin/",
     "^LICENSE$",
-    "^docs/agent/PLAYBOOK\\.md$"
+    "^docs/agent/PLAYBOOK\\.md$",
+    "/\\.terraform/",
+    "\\.terraform\\.lock\\.hcl$"
   ]
 }
