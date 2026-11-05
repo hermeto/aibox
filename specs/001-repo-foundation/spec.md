@@ -8,6 +8,18 @@
 
 **Input**: User description: "Open-source foundation for the AIBox repository: governance files, templates, repo-as-code, quality gates in CI aggregated by `ci-gate`, security workflows, dependency updates, release automation and developer experience (playbook §6, feature 001)."
 
+## Clarifications
+
+### Session 2026-11-05
+
+- Q: How is the DCO sign-off verified without installing a third-party GitHub App? → A: A CI step lists the PR's commits (`base..head`, merge commits excluded) and fails if any commit message lacks a `Signed-off-by:` trailer matching the commit author's email; it names each offending commit. (decided by agent: playbook plan input mandates a small step and no app install; matching the author email is the DCO convention)
+- Q: CodeQL for Python when the repository has no Python code yet? → A: The CodeQL matrix ships with `go` and `actions` now; `python` is added by feature 014 when `report/` exists, because CodeQL fails a language with no source files. (decided by agent: keeps the security workflow green without disabling anything)
+- Q: How are linters installed so local runs and CI behave identically? → A: Tool versions are pinned once in the Makefile; `make tools` installs Go-based linters into `./bin` and runs Python/Node linters through `uvx`/`npx` at pinned versions; CI calls the same `make` targets and the pre-commit hooks call them too. (decided by agent: single source of truth, works on Linux without Homebrew)
+- Q: How are labels and repository settings applied when they are "as code"? → A: `.github/labels.yml` is the catalog; a `labels` workflow syncs it on push to the default branch, and `hack/github/setup-repo.sh` applies the ruleset, labels, milestones and security settings once with `gh` (run by the maintainer). (decided by agent: the agent has no admin API access in this run; the maintainer runs the script once)
+- Q: Which Trivy integration is used given the 2026 supply-chain incident affecting `aquasecurity/trivy-action` tags? → A: Run the official Trivy container image pinned by digest instead of the action. (decided by agent: smaller trust surface; digest pinning satisfies principle II)
+- Q: Which response-time target does SECURITY.md promise? → A: Acknowledge within 3 business days, triage within 7 days, fix or mitigation for critical issues within 30 days. (decided by agent: realistic for a single maintainer, in line with common OSS policies)
+- Q: Is `ci-gate` satisfied when a required job is skipped? → A: No; `ci-gate` succeeds only if every required job result is `success`. (decided by agent: simplest rule that cannot hide failures)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - First-time contributor gets productive with one command (Priority: P1)
