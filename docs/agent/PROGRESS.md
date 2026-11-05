@@ -7,15 +7,16 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 002-cli-skeleton |
-| Spec Kit phase | implement + converge done; waiting for CI on PR #4 |
-| Last commit | see `git log -1` on `002-cli-skeleton` |
+| Current feature | 003-local-platform |
+| Spec Kit phase | implement + converge done; PR #5 ready after CI |
+| Last commit | see `git log -1` on `003-local-platform` |
 | Run status | in progress |
 
 ## Open PRs (merge order, bottom-up)
 
 1. [#1](https://github.com/hermeto/aibox/pull/1) `001-repo-foundation` → `claude/jolly-albattani-wcnudk`
 2. [#4](https://github.com/hermeto/aibox/pull/4) `002-cli-skeleton` → `001-repo-foundation`
+3. [#5](https://github.com/hermeto/aibox/pull/5) `003-local-platform` → `002-cli-skeleton`
 
 ## Blockers / `needs-human`
 
@@ -79,3 +80,6 @@ maintainer's Mac. Adaptations are listed under "Run decisions".
 7. **Dependency review.** The job first checks that the dependency graph is enabled and
    warns (instead of failing) while it is disabled; it enforces automatically once enabled
    (see #2).
+8. **Image digests from CI.** Registries whose blobs are unreachable from the agent's
+   container (quay.io, ghcr blobs) are pinned with digests read from the `e2e-local` job's
+   "Running images (digests)" step.
