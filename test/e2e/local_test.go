@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/hermeto/aibox/internal/cli"
+	"github.com/hermeto/aibox/internal/models"
 	"github.com/hermeto/aibox/internal/profile"
 	"github.com/hermeto/aibox/internal/smoke"
 )
@@ -85,5 +86,20 @@ func TestLocalPlatform(t *testing.T) {
 	}
 	if code != 0 || !rep.OK {
 		t.Fatalf("smoke failed (exit %d)", code)
+	}
+
+	// Weight lifecycle (feature 007): mirror the tiny model into the in-cluster store, verify
+	// it from a pod, and check that a second sync uploads nothing.
+	for i, want := range []string{models.StatusSynced, models.StatusSkipped} {
+		code, out = aibox(t, "models", "sync", "--profile", "local", "--model", "tiny-random-llama", "--timeout", "10m", "--output", "json")
+		var sync models.Report
+		if err := json.Unmarshal([]byte(out), &sync); err != nil || len(sync.Models) != 1 {
+			t.Fatalf("sync %d output: %v\n%s", i+1, err, out)
+		}
+		m := sync.Models[0]
+		t.Logf("sync %d: %s verified=%t %s", i+1, m.Status, m.Verified, m.Message)
+		if code != 0 || m.Status != want || !m.Verified {
+			t.Fatalf("sync %d: exit %d, status %s (want %s), verified %t", i+1, code, m.Status, want, m.Verified)
+		}
 	}
 }
