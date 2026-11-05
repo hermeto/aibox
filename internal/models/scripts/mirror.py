@@ -6,6 +6,8 @@ mirror  Copy one Hugging Face revision to s3://$BUCKET/$PREFIX one file at a tim
         means the mirror is complete, so the run is skipped; files already uploaded with
         a matching size and checksum are not uploaded again (resume).
 verify  Stream every object listed in SHA256SUMS and compare its SHA-256 (no local disk).
+fetch   Download a complete mirror into $DEST, checking every file against SHA256SUMS
+        (the nvme-cache loading method; files already present and intact are kept).
 
 The last line printed is also written to the termination log, which the CLI reports.
 """
@@ -127,27 +129,49 @@ def mirror(s3, bucket, prefix):
 
 
 def verify(s3, bucket, prefix):
-    if not head(s3, bucket, prefix + ".complete"):
-        done(f"not mirrored: s3://{bucket}/{prefix}.complete is missing", 1)
-    manifest = s3.get_object(Bucket=bucket, Key=prefix + "SHA256SUMS")["Body"].read().decode()
-    lines = [line for line in manifest.splitlines() if line.strip()]
-    for line in lines:
-        digest, path = line.split("  ", 1)
+    entries = manifest_lines(s3, bucket, prefix)
+    for digest, path in entries:
         h = hashlib.sha256()
         for chunk in s3.get_object(Bucket=bucket, Key=prefix + path)["Body"].iter_chunks(CHUNK):
             h.update(chunk)
         if h.hexdigest() != digest:
             done(f"{path}: SHA-256 {h.hexdigest()} does not match SHA256SUMS ({digest})", 1)
-    done(f"verified: {len(lines)} files")
+    done(f"verified: {len(entries)} files")
+
+
+def manifest_lines(s3, bucket, prefix):
+    if not head(s3, bucket, prefix + ".complete"):
+        done(f"not mirrored: s3://{bucket}/{prefix}.complete is missing (run aibox models sync)", 1)
+    manifest = s3.get_object(Bucket=bucket, Key=prefix + "SHA256SUMS")["Body"].read().decode()
+    return [line.split("  ", 1) for line in manifest.splitlines() if line.strip()]
+
+
+def fetch(s3, bucket, prefix):
+    dest = os.path.abspath(os.environ["DEST"])
+    entries = manifest_lines(s3, bucket, prefix)
+    for digest, path in entries:
+        target = os.path.abspath(os.path.join(dest, path))
+        if not target.startswith(dest + os.sep):
+            done(f"{path}: outside {dest}", 1)
+        if os.path.exists(target) and sha256_file(target) == digest:
+            continue
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        s3.download_file(bucket, prefix + path, target)
+        if sha256_file(target) != digest:
+            done(f"{path}: SHA-256 does not match SHA256SUMS after download", 1)
+    done(f"fetched: {len(entries)} files to {dest}")
+
+
+MODES = {"mirror": mirror, "verify": verify, "fetch": fetch}
 
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("mirror", "verify"):
-        done("usage: mirror.py mirror|verify", 2)
+    if len(sys.argv) != 2 or sys.argv[1] not in MODES:
+        done("usage: mirror.py mirror|verify|fetch", 2)
     bucket, prefix = os.environ["BUCKET"], os.environ["PREFIX"]
     s3 = client()
     try:
-        (mirror if sys.argv[1] == "mirror" else verify)(s3, bucket, prefix)
+        MODES[sys.argv[1]](s3, bucket, prefix)
     except ClientError as e:
         endpoint = os.environ.get("S3_ENDPOINT") or "AWS S3"
         done(f"object storage error ({endpoint}, bucket {bucket}): {e}", 1)

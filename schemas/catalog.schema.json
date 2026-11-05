@@ -54,6 +54,8 @@
           }
         },
         "loadMethod": { "enum": ["s3-stream", "nvme-cache", "hf-download", "none"] },
+        "startupTimeoutSeconds": { "type": "integer", "minimum": 60, "maximum": 7200, "description": "Budget for loading weights and the warm-up request (default 1800)." },
+        "shutdownGracePeriodSeconds": { "type": "integer", "minimum": 30, "maximum": 3600, "description": "Time to drain in-flight requests on shutdown (default 120)." },
         "slo": {
           "type": "object",
           "additionalProperties": false,

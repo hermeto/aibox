@@ -157,3 +157,14 @@ func TestDefaultPath(t *testing.T) {
 		t.Fatal(DefaultPath())
 	}
 }
+
+func TestServingTimings(t *testing.T) {
+	m := &Model{}
+	if m.StartupTimeout() != DefaultStartupTimeoutSeconds || m.GracePeriod() != DefaultShutdownGracePeriodSeconds {
+		t.Fatal("defaults")
+	}
+	m.StartupTimeoutSeconds, m.ShutdownGracePeriodSeconds = 600, 300
+	if m.StartupTimeout() != 600 || m.GracePeriod() != 300 {
+		t.Fatal("overrides")
+	}
+}
