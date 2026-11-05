@@ -13,6 +13,7 @@ Available Commands:
   models      List and mirror catalog models
   report      Generate the benchmark report from results
   smoke       Send one request per model and check metrics, traces and dashboards
+  ttl         Show or extend the automatic teardown time of the current cloud run
   up          Bring up the platform for a profile (cluster, GitOps, workloads)
   version     Print version information
 

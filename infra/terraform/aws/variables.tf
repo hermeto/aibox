@@ -108,3 +108,13 @@ variable "system_node_max" {
     error_message = "require 1 <= system_node_min <= system_node_desired <= system_node_max <= 10."
   }
 }
+
+variable "teardown_role_arn" {
+  description = "IAM role of the TTL teardown job (guardrails stack); granted cluster admin so it can drain the cluster before destroy. Empty disables the access entry."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.teardown_role_arn == "" || can(regex("^arn:aws[a-z-]*:iam::[0-9]{12}:role/", var.teardown_role_arn))
+    error_message = "teardown_role_arn must be an IAM role ARN or empty."
+  }
+}

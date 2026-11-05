@@ -1,9 +1,9 @@
 # Runbook: first AWS run (aws-dev / aws-bench)
 
 > **Costs money.** An `aws-dev` environment costs roughly USD 0.60/hour before any GPU node
-> (EKS control plane, 2 × m7i.xlarge system nodes, NAT gateway). Always finish with
-> `aibox down`. Budgets, TTL teardown and the orphan checker arrive with feature 005 — until
-> then, set a manual AWS Budget alert.
+> (EKS control plane, 2 × m7i.xlarge system nodes, NAT gateway). Every run needs a budget and
+> has an automatic teardown (TTL) — see [cost-guardrails.md](cost-guardrails.md). Always
+> finish with `aibox down`.
 
 This runbook is for the maintainer. The automation never runs it unattended.
 
@@ -54,7 +54,7 @@ blocked, TLS-only, protected with `prevent_destroy`). Keep this directory's loca
 ```bash
 make build
 ./bin/aibox doctor --profile aws-dev
-./bin/aibox up --profile aws-dev          # shows the plan, asks for confirmation
+BUDGET_USD=50 ./bin/aibox up --profile aws-dev --notify-email you@example.com   # shows the plans, asks for confirmation
 ```
 
 - The EKS public endpoint is limited to your egress IP (/32). Pass `--admin-cidr` to use
@@ -72,8 +72,8 @@ If `up` fails half-way, re-run it (Terraform resumes) or run `aibox down`.
 ./bin/aibox down --profile aws-dev        # asks for confirmation; destroys everything
 ```
 
-Then check the console (EC2, ELB, EBS, NAT gateways, EIPs) for leftovers tagged
-`project=aibox` — feature 005 automates this check.
+`down` ends with an orphan check by tag and exits 1 if anything remains (see
+[cost-guardrails.md](cost-guardrails.md)).
 
 ## Troubleshooting
 

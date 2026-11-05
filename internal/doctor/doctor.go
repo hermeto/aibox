@@ -9,7 +9,9 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
+	"github.com/hermeto/aibox/internal/cost"
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/profile"
 )
@@ -61,6 +63,14 @@ type Env struct {
 	Getenv func(string) string
 	// GOOS selects install hints (defaults to runtime.GOOS via the caller).
 	GOOS string
+	// PriceTable enables the cost estimate check for cloud profiles.
+	PriceTable *cost.Table
+	// BudgetUSD is the run budget, compared with the estimate (0 = not set).
+	BudgetUSD float64
+	// TTL of the planned run (0 = profile default).
+	TTL time.Duration
+	// Now is the clock (nil = time.Now).
+	Now func() time.Time
 }
 
 func (e Env) getenv(k string) string {
@@ -80,6 +90,9 @@ func Run(ctx context.Context, p *profile.Profile, env Env) *Report {
 	case profile.ProviderAWS:
 		r.add(toolChecks(ctx, env, awsTools)...)
 		r.add(awsChecks(ctx, env, p.Spec.AWS)...)
+		if env.PriceTable != nil {
+			r.add(estimateCheck(p, env))
+		}
 	}
 	return r.finish()
 }
@@ -152,4 +165,38 @@ func (e *errWriter) printf(format string, args ...any) {
 	if e.err == nil {
 		_, e.err = fmt.Fprintf(e.w, format, args...)
 	}
+}
+
+func estimateCheck(p *profile.Profile, env Env) Check {
+	now := time.Now()
+	if env.Now != nil {
+		now = env.Now()
+	}
+	ttl := env.TTL
+	if ttl == 0 {
+		ttl, _ = p.Spec.Guardrails.TTLDuration()
+	}
+	e := cost.EstimateRun(p, env.PriceTable, ttl, now)
+	c := Check{ID: "cost.estimate", Name: "cost estimate", Status: Pass, Message: e.Summary(), Details: map[string]string{
+		"worstCaseUSD": fmt.Sprintf("%.2f", e.Total), "perHourUSD": fmt.Sprintf("%.2f", e.PerHour), "priceTableDate": e.TableDate,
+	}}
+	var issues []string
+	if env.BudgetUSD > 0 && env.BudgetUSD < e.Total {
+		issues = append(issues, fmt.Sprintf("budget USD %.2f is below the worst case USD %.2f", env.BudgetUSD, e.Total))
+	}
+	if env.BudgetUSD == 0 {
+		c.Remediation = fmt.Sprintf("set BUDGET_USD (>= %.0f recommended) before aibox up", e.Total)
+	}
+	if e.StaleTable {
+		issues = append(issues, "price table older than 90 days")
+	}
+	if !e.Verified {
+		issues = append(issues, "price table not verified against the AWS Price List API")
+	}
+	if len(issues) > 0 {
+		c.Status = Warn
+		c.Message += "; " + strings.Join(issues, "; ")
+		c.Remediation = "refresh prices with `go run ./hack/pricing` and/or raise the budget"
+	}
+	return c
 }

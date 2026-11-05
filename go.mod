@@ -6,6 +6,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.47.6
 	github.com/aws/aws-sdk-go-v2/config v1.33.14
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.344.0
+	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.7
+	github.com/aws/aws-sdk-go-v2/service/pricing v1.51.3
 	github.com/aws/aws-sdk-go-v2/service/servicequotas v1.43.9
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.7
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3

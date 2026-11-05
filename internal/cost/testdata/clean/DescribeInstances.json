@@ -1,0 +1,1 @@
+{"Reservations":[{"Instances":[{"InstanceId":"i-0aaaaaaaaaaaaaaa1","InstanceType":"g6.xlarge","State":{"Name":"terminated"},"LaunchTime":"2026-11-05T00:00:00Z"}]}]}

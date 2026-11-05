@@ -135,3 +135,18 @@ run "rejects_single_az" {
   }
   expect_failures = [var.az_count]
 }
+
+run "rejects_bad_teardown_role" {
+  command = plan
+  variables {
+    teardown_role_arn = "not-an-arn"
+  }
+  expect_failures = [var.teardown_role_arn]
+}
+
+run "accepts_teardown_role" {
+  command = plan
+  variables {
+    teardown_role_arn = "arn:aws:iam::000000000000:role/aibox-aws-dev-202611050000-abcd-teardown"
+  }
+}

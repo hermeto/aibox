@@ -1,0 +1,21 @@
+# AIBox price table — USD per hour, region us-east-1.
+# Representative list prices recorded by the agent without Price List API access
+# (verified: false). Refresh before a benchmark campaign:
+#   go run ./hack/pricing --region us-east-1 --out data/pricing/aws-us-east-1.yaml
+# Spot prices fluctuate; the values below are representative recent averages.
+region: us-east-1
+currency: USD
+source: "AWS EC2 On-Demand pricing page and spot price history (manual, unverified)"
+lastUpdated: "2026-11-05"
+verified: false
+instances:
+  m7i.xlarge: { onDemand: 0.2016, spot: 0.0800 }
+  g6.xlarge: { onDemand: 0.8048, spot: 0.3200 }
+  g6.2xlarge: { onDemand: 0.9776, spot: 0.3900 }
+  g6.12xlarge: { onDemand: 4.6016, spot: 1.8400 }
+  g5.xlarge: { onDemand: 1.0060, spot: 0.4000 }
+  g5.12xlarge: { onDemand: 5.6720, spot: 2.2700 }
+  p5.48xlarge: { onDemand: 55.0400, spot: 22.0000, capacityBlock: 31.4640 }
+fixed:
+  eks-control-plane: 0.10
+  nat-gateway: 0.045

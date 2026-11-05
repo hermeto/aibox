@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hermeto/aibox/internal/cost"
 	"github.com/hermeto/aibox/internal/doctor"
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
@@ -45,6 +46,8 @@ type App struct {
 	Account func(ctx context.Context, region string) (string, error)
 	// EgressIP returns the operator's public IP (nil means checkip.amazonaws.com).
 	EgressIP func(ctx context.Context) (string, error)
+	// CostClients returns read-only EC2/ELBv2 clients (nil means the AWS SDK).
+	CostClients func(ctx context.Context, region string) (cost.EC2API, cost.ELBAPI, error)
 
 	Opts   Options
 	Format output.Format
@@ -117,7 +120,7 @@ or on AWS EKS), runs reproducible benchmarks and reports cost per 1M tokens and 
 	pf.BoolVar(&app.Opts.DryRun, "dry-run", false, "print external commands instead of running them")
 	pf.BoolVarP(&app.Opts.Yes, "yes", "y", false, "assume yes for confirmations")
 
-	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app))
+	root.AddCommand(newDoctorCmd(app), newVersionCmd(app), newUpCmd(app), newDownCmd(app), newSmokeCmd(app), newCostCmd(app), newTTLCmd(app))
 	for _, c := range notImplemented {
 		root.AddCommand(newNotImplementedCmd(c))
 	}

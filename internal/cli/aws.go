@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hermeto/aibox/internal/awsapi"
+	"github.com/hermeto/aibox/internal/cost"
 	"github.com/hermeto/aibox/internal/kube"
 	"github.com/hermeto/aibox/internal/platform"
 	"github.com/hermeto/aibox/internal/profile"
@@ -64,6 +66,7 @@ func (a *App) awsPlatform(p *profile.Profile) (*platform.AWS, error) {
 		}
 	}
 	region := p.Spec.AWS.Region
+	clients := a.costClients()
 	stateDir := ""
 	if d := a.getenv("AIBOX_STATE_DIR"); d != "" {
 		stateDir = filepath.Join(d, p.Metadata.Name)
@@ -81,5 +84,53 @@ func (a *App) awsPlatform(p *profile.Profile) (*platform.AWS, error) {
 		EgressIP: egress,
 		Kube:     kubeFile,
 		Getenv:   a.getenv,
+		Orphans: func(ctx context.Context, region, runID string) (*cost.OrphanReport, error) {
+			e, l, err := clients(ctx, region)
+			if err != nil {
+				return nil, err
+			}
+			return cost.FindOrphans(ctx, e, l, region, runID)
+		},
 	}, nil
+}
+
+func (a *App) costClients() func(ctx context.Context, region string) (cost.EC2API, cost.ELBAPI, error) {
+	if a.CostClients != nil {
+		return a.CostClients
+	}
+	return func(ctx context.Context, region string) (cost.EC2API, cost.ELBAPI, error) {
+		e, l, err := awsapi.CostClients(ctx, region)
+		if err != nil {
+			return nil, nil, err
+		}
+		return e, l, nil
+	}
+}
+
+// budget resolves --budget, then BUDGET_USD.
+func (a *App) budget(flag float64) (float64, error) {
+	if flag > 0 {
+		return flag, nil
+	}
+	if v := a.getenv("BUDGET_USD"); v != "" {
+		b, err := strconv.ParseFloat(v, 64)
+		if err != nil || b <= 0 {
+			return 0, fmt.Errorf("BUDGET_USD=%q is not a positive number", v)
+		}
+		return b, nil
+	}
+	return 0, nil
+}
+
+// priceTable loads the region's price table from the repository (nil if unavailable).
+func priceTable(region string) *cost.Table {
+	root, err := profile.RepoRoot()
+	if err != nil {
+		return nil
+	}
+	t, err := cost.LoadTable(root, region)
+	if err != nil {
+		return nil
+	}
+	return t
 }
