@@ -7,6 +7,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # name|url (pinned to the component version used in platform/)
 crds=(
   "argocd-application|https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.1/manifests/crds/application-crd.yaml"
+  "karpenter-nodepools|https://raw.githubusercontent.com/aws/karpenter-provider-aws/v1.15.1/pkg/apis/crds/karpenter.sh_nodepools.yaml"
+  "karpenter-ec2nodeclasses|https://raw.githubusercontent.com/aws/karpenter-provider-aws/v1.15.1/pkg/apis/crds/karpenter.k8s.aws_ec2nodeclasses.yaml"
 )
 
 mkdir -p hack/crds
