@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -35,6 +36,11 @@ type gitops struct {
 	// WeightsBucket and Region are written to the run ConfigMap the model servers read.
 	WeightsBucket string
 	Region        string
+	// APIKey is the CLI's gateway key, applied into the gateway's API key Secret.
+	APIKey string
+	// TLSCertificateArn and SourceRanges configure the cloud gateway load balancer.
+	TLSCertificateArn string
+	SourceRanges      []string
 }
 
 // active returns the components the root Application deploys in the current state.
@@ -67,7 +73,28 @@ func (g *gitops) applyRunConfig(ctx context.Context, k KubeAPI) error {
 			"profile": g.ProfileName, "runId": g.RunID, "weightsBucket": g.WeightsBucket, "region": g.Region,
 		},
 	}}
-	return k.Apply(ctx, kube.ConfigMaps, cm)
+	if err := k.Apply(ctx, kube.ConfigMaps, cm); err != nil {
+		return err
+	}
+	if g.APIKey == "" {
+		return nil
+	}
+	gwns := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1", "kind": "Namespace",
+		"metadata": map[string]any{"name": serving.GatewayNamespace, "labels": map[string]any{"app.kubernetes.io/part-of": "aibox"}},
+	}}
+	if err := k.Apply(ctx, kube.Namespaces, gwns); err != nil {
+		return err
+	}
+	// Server-side apply owns only the CLI's entry; keys merged from the secret store stay.
+	secret := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1", "kind": "Secret",
+		"metadata": map[string]any{"name": APIKeySecret, "namespace": serving.GatewayNamespace,
+			"labels": map[string]any{"app.kubernetes.io/part-of": "aibox"}},
+		"type": "Opaque",
+		"data": map[string]any{CLIClientID: base64.StdEncoding.EncodeToString([]byte(g.APIKey))},
+	}}
+	return k.Apply(ctx, kube.Secrets, secret)
 }
 
 func (g *gitops) logf(format string, args ...any) {
@@ -89,7 +116,9 @@ func (g *gitops) bootstrap(ctx context.Context, k KubeAPI, src GitSource, comps 
 		return fmt.Errorf("run config: %w", err)
 	}
 	g.logf("Applying root Application %s", RootAppName)
-	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName, RootParams{RunID: g.RunID, ModelsReady: g.ModelsReady})); err != nil {
+	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName, RootParams{
+		RunID: g.RunID, ModelsReady: g.ModelsReady, TLSCertificateArn: g.TLSCertificateArn, SourceRanges: g.SourceRanges,
+	})); err != nil {
 		return err
 	}
 	comps = g.active(comps)
@@ -126,6 +155,9 @@ type RootParams struct {
 	RunID string
 	// ModelsReady deploys components that need mirrored weights.
 	ModelsReady bool
+	// TLSCertificateArn and SourceRanges configure the cloud gateway load balancer.
+	TLSCertificateArn string
+	SourceRanges      []string
 }
 
 // RootApplication renders the app-of-apps root for a profile.
@@ -139,6 +171,12 @@ func RootApplication(src GitSource, profileName string, rp RootParams) *unstruct
 	}
 	if rp.ModelsReady {
 		params = append(params, map[string]any{"name": "modelsReady", "value": "true"})
+	}
+	if rp.TLSCertificateArn != "" {
+		params = append(params, map[string]any{"name": "gateway.tlsCertificateArn", "value": rp.TLSCertificateArn})
+	}
+	for i, r := range rp.SourceRanges {
+		params = append(params, map[string]any{"name": fmt.Sprintf("gateway.sourceRanges[%d]", i), "value": r})
 	}
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "argoproj.io/v1alpha1",

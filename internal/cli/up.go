@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -17,14 +18,28 @@ func (a *App) localPlatform(p *profile.Profile) (*platform.Local, error) {
 	if err != nil {
 		return nil, errors.New("run aibox from a checkout of the AIBox repository (platform manifests are read from it)")
 	}
+	stateDir := ""
+	if d := a.getenv("AIBOX_STATE_DIR"); d != "" {
+		stateDir = filepath.Join(d, p.Metadata.Name)
+	}
 	return &platform.Local{
-		Profile: p,
-		Runner:  a.runner(),
-		Root:    root,
-		Kube:    a.kube(),
-		Log:     a.Err,
-		DryRun:  a.Opts.DryRun,
+		Profile:  p,
+		Runner:   a.runner(),
+		Root:     root,
+		Kube:     a.kube(),
+		Log:      a.Err,
+		DryRun:   a.Opts.DryRun,
+		StateDir: stateDir,
 	}, nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func newUpCmd(app *App) *cobra.Command {
@@ -37,6 +52,7 @@ func newUpCmd(app *App) *cobra.Command {
 		ttl         time.Duration
 		skipDoctor  bool
 		skipModels  bool
+		tlsCertArn  string
 	)
 	cmd := &cobra.Command{
 		Use:   "up",
@@ -81,6 +97,7 @@ tree (unpushed changes, private forks).`,
 				res, err := a.Up(cmd.Context(), platform.AWSUpOptions{
 					RepoURL: opts.RepoURL, Revision: opts.Revision, AdminCIDRs: adminCIDRs, Owner: owner, Timeout: opts.Timeout,
 					BudgetUSD: budget, NotifyEmail: notifyEmail, TTL: ttl,
+					TLSCertificateArn: firstNonEmpty(tlsCertArn, app.getenv("AIBOX_TLS_CERT_ARN")),
 				})
 				if err != nil {
 					return err
@@ -115,6 +132,7 @@ tree (unpushed changes, private forks).`,
 	f.StringVar(&notifyEmail, "notify-email", "", "AWS: e-mail for budget and teardown alerts (default: profile ownerEmail)")
 	f.DurationVar(&ttl, "ttl", 0, "AWS: automatic teardown after this duration (default: profile guardrails.ttl; 30m-24h)")
 	f.BoolVar(&skipModels, "skip-models", false, "AWS: do not mirror model weights or deploy the model servers")
+	f.StringVar(&tlsCertArn, "tls-cert-arn", "", "AWS: ACM certificate for the gateway load balancer (or AIBOX_TLS_CERT_ARN)")
 	return cmd
 }
 

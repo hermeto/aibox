@@ -52,6 +52,10 @@ var LocalEndpoints = []Endpoint{
 	{Name: "argocd", URL: "http://127.0.0.1:30081"},
 }
 
+// LocalMetricsURL serves the local model server's Prometheus metrics (NodePort 30082); the
+// gateway on 30080 exposes only the OpenAI API.
+const LocalMetricsURL = "http://127.0.0.1:30082/metrics"
+
 // Component is one child Application of the app-of-apps.
 type Component struct {
 	Name      string `json:"name"`
@@ -76,6 +80,16 @@ type Local struct {
 	DryRun bool
 	// PollInterval between readiness checks (default 5s).
 	PollInterval time.Duration
+	// StateDir keeps the CLI's gateway key (default <Root>/.aibox/<profile>).
+	StateDir string
+}
+
+// StateDirectory returns where the profile's local state (the gateway key) lives.
+func (l *Local) StateDirectory() string {
+	if l.StateDir != "" {
+		return l.StateDir
+	}
+	return filepath.Join(l.Root, ".aibox", l.Profile.Metadata.Name)
 }
 
 // UpOptions configure a bring-up.
@@ -171,6 +185,11 @@ func (l *Local) Up(ctx context.Context, opts UpOptions) (*UpResult, error) {
 	defer cancel()
 
 	g := l.gitops()
+	if !l.DryRun {
+		if g.APIKey, err = LoadOrCreateAPIKey(l.StateDirectory()); err != nil {
+			return nil, err
+		}
+	}
 	if err := g.installArgoCD(wctx); err != nil {
 		return nil, err
 	}
