@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/hermeto/aibox/internal/cost"
 	"github.com/hermeto/aibox/internal/exec"
 )
 
@@ -175,5 +178,48 @@ func TestQuotaNames(t *testing.T) {
 	}
 	if (Env{}).getenv("PATH") == "" {
 		t.Fatal("getenv default")
+	}
+}
+
+func TestCostEstimateCheck(t *testing.T) {
+	p := loadProfile(t, "aws-dev")
+	table, err := cost.LoadTable(filepath.Join("..", ".."), "us-east-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := func() time.Time { return time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC) }
+	env := Env{Runner: fakeAWSTools(), AWS: factory(healthyAWS(), nil), Getenv: func(string) string { return "" }, PriceTable: table, Now: now}
+	check := func(e Env) Check {
+		for _, c := range Run(context.Background(), p, e).Checks {
+			if c.ID == "cost.estimate" {
+				return c
+			}
+		}
+		t.Fatal("no cost.estimate check")
+		return Check{}
+	}
+	c := check(env)
+	// The shipped table is unverified, so the estimate warns until refreshed.
+	if c.Status != Warn || c.Details["worstCaseUSD"] != "5.32" || !strings.Contains(c.Message, "not verified") {
+		t.Fatalf("%+v", c)
+	}
+	verified := *table
+	verified.Verified = true
+	env.PriceTable = &verified
+	env.BudgetUSD = 100
+	if c = check(env); c.Status != Pass {
+		t.Fatalf("budget above estimate: %+v", c)
+	}
+	env.BudgetUSD = 1
+	if c = check(env); c.Status != Warn || !strings.Contains(c.Message, "below the worst case") {
+		t.Fatalf("budget below estimate: %+v", c)
+	}
+	env.BudgetUSD, env.TTL = 0, 8*time.Hour
+	if c = check(env); c.Status != Pass || !strings.Contains(c.Remediation, "BUDGET_USD") || c.Details["worstCaseUSD"] != "10.64" {
+		t.Fatalf("no budget: %+v", c)
+	}
+	env.Now = func() time.Time { return time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC) }
+	if c = check(env); c.Status != Warn || !strings.Contains(c.Message, "older than 90 days") {
+		t.Fatalf("stale: %+v", c)
 	}
 }

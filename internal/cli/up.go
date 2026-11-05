@@ -29,10 +29,13 @@ func (a *App) localPlatform(p *profile.Profile) (*platform.Local, error) {
 
 func newUpCmd(app *App) *cobra.Command {
 	var (
-		opts       platform.UpOptions
-		adminCIDRs []string
-		owner      string
-		skipDoctor bool
+		opts        platform.UpOptions
+		adminCIDRs  []string
+		owner       string
+		budgetFlag  float64
+		notifyEmail string
+		ttl         time.Duration
+		skipDoctor  bool
 	)
 	cmd := &cobra.Command{
 		Use:   "up",
@@ -50,10 +53,18 @@ tree (unpushed changes, private forks).`,
 			if err != nil {
 				return err
 			}
+			budget, err := app.budget(budgetFlag)
+			if err != nil {
+				return UsageError(err)
+			}
+			if p.IsCloud() && budget <= 0 {
+				return platform.ErrBudgetRequired
+			}
 			if !skipDoctor {
-				env := doctor.Env{Runner: app.readOnlyRunner(), Getenv: app.getenv, GOOS: goos()}
+				env := doctor.Env{Runner: app.readOnlyRunner(), Getenv: app.getenv, GOOS: goos(), BudgetUSD: budget, TTL: ttl}
 				if p.IsCloud() {
 					env.AWS = app.awsFactory()
+					env.PriceTable = priceTable(p.Spec.AWS.Region)
 				}
 				report := doctor.Run(cmd.Context(), p, env)
 				if !report.OK || (p.IsCloud() && report.Summary.Skip > 0) {
@@ -68,6 +79,7 @@ tree (unpushed changes, private forks).`,
 				}
 				res, err := a.Up(cmd.Context(), platform.AWSUpOptions{
 					RepoURL: opts.RepoURL, Revision: opts.Revision, AdminCIDRs: adminCIDRs, Owner: owner, Timeout: opts.Timeout,
+					BudgetUSD: budget, NotifyEmail: notifyEmail, TTL: ttl,
 				})
 				if err != nil {
 					return err
@@ -93,14 +105,21 @@ tree (unpushed changes, private forks).`,
 	f.BoolVar(&skipDoctor, "skip-doctor", false, "skip the preflight checks")
 	f.StringSliceVar(&adminCIDRs, "admin-cidr", nil, "AWS: CIDR(s) allowed to reach the EKS API (default: your egress IP /32)")
 	f.StringVar(&owner, "owner", "", "AWS: owner tag (default: profile ownerEmail, then git user.email)")
+	f.Float64Var(&budgetFlag, "budget", 0, "AWS: run budget in USD (or BUDGET_USD); required for cloud profiles")
+	f.StringVar(&notifyEmail, "notify-email", "", "AWS: e-mail for budget and teardown alerts (default: profile ownerEmail)")
+	f.DurationVar(&ttl, "ttl", 0, "AWS: automatic teardown after this duration (default: profile guardrails.ttl; 30m-24h)")
 	return cmd
 }
 
 func newDownCmd(app *App) *cobra.Command {
-	return &cobra.Command{
-		Use:     "down",
-		Short:   "Tear down the platform for a profile and check for orphans",
-		Example: "  aibox down --profile local",
+	var orphansOnly bool
+	cmd := &cobra.Command{
+		Use:   "down",
+		Short: "Tear down the platform for a profile and check for orphans",
+		Long: `down deletes the environment of the profile. For cloud profiles it drains the cluster,
+destroys the main stack and then the guardrails stack, and finishes with an orphan check
+that lists every resource still tagged with the run ID (exit 1 if any remain).`,
+		Example: "  aibox down --profile local\n  aibox down --profile aws-dev\n  aibox down --profile aws-dev --orphans-only",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			p, err := profile.Load(app.Opts.Profile)
@@ -112,11 +131,22 @@ func newDownCmd(app *App) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				deleted, err := a.Down(cmd.Context())
-				if err != nil {
-					return err
+				if orphansOnly {
+					report, err := a.CheckOrphans(cmd.Context())
+					if report != nil {
+						if perr := app.print(report); perr != nil {
+							return perr
+						}
+					}
+					return silenceReported(err, report != nil)
 				}
-				return app.print(downResult{Profile: p.Metadata.Name, Cluster: p.Spec.Cluster.Name, Deleted: deleted})
+				res, err := a.Down(cmd.Context())
+				if res != nil {
+					if perr := app.print(res); perr != nil {
+						return perr
+					}
+				}
+				return silenceReported(err, res != nil && res.Orphans != nil)
 			}
 			l, err := app.localPlatform(p)
 			if err != nil {
@@ -129,4 +159,17 @@ func newDownCmd(app *App) *cobra.Command {
 			return app.print(downResult{Profile: p.Metadata.Name, Cluster: p.Spec.Cluster.Name, Deleted: deleted})
 		},
 	}
+	cmd.Flags().BoolVar(&orphansOnly, "orphans-only", false, "AWS: only run the orphan check for the current run")
+	return cmd
+}
+
+// silenceReported marks err as already reported when a report was printed.
+func silenceReported(err error, printed bool) error {
+	if err == nil {
+		return nil
+	}
+	if printed && errors.Is(err, platform.ErrOrphans) {
+		return &ExitError{Code: ExitFailure, Err: err, Silent: true}
+	}
+	return err
 }

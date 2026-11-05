@@ -15,7 +15,6 @@ var notImplemented = []stub{
 	{"models", "List and mirror catalog models", "007"},
 	{"bench", "Run a declared benchmark experiment", "013"},
 	{"report", "Generate the benchmark report from results", "014"},
-	{"cost", "Show the accumulated cost of the current cloud run", "005"},
 }
 
 // notImplementedFor returns the exit-2 error for a command that exists for some profiles only.
