@@ -55,6 +55,34 @@ jobs:
           go-version-file: go.mod
       - run: make test
 
+  cli:
+    name: cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build for all release targets
+        run: |
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            GOOS="${target%/*}" GOARCH="${target#*/}" go build -o /dev/null ./cmd/aibox
+          done
+      - run: make build
+      - name: aibox doctor --profile local
+        run: ./bin/aibox doctor --profile local --output json | tee doctor.json | jq -e '.ok == true'
+      - name: Unimplemented commands exit 2
+        run: |
+          set +e
+          ./bin/aibox up --profile local
+          code=$?
+          test "$code" -eq 2
+
   pr-title:
     name: pr-title
     if: github.event_name == 'pull_request'
@@ -156,7 +184,7 @@ jobs:
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [lint, test, pr-title, dco, dependency-review, trivy]
+    needs: [lint, test, cli, pr-title, dco, dependency-review, trivy]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}

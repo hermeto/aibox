@@ -18,6 +18,12 @@ GORELEASER_VERSION        ?= v2.20.0
 BIN := $(CURDIR)/bin
 export PATH := $(BIN):$(PATH)
 
+PROFILE ?= local
+AIBOX   := $(BIN)/aibox
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT  ?= $(shell git rev-parse HEAD 2>/dev/null || echo none)
+LDFLAGS := -X github.com/hermeto/aibox/internal/version.Version=$(VERSION) -X github.com/hermeto/aibox/internal/version.Commit=$(COMMIT)
+
 GOLANGCI_LINT := $(BIN)/golangci-lint
 ACTIONLINT    := $(BIN)/actionlint
 EC            := $(BIN)/editorconfig-checker
@@ -61,6 +67,32 @@ $(SHELLCHECK):
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go code
 	$(GOLANGCI_LINT) fmt ./...
+
+##@ Build
+
+.PHONY: build
+build: ## Build the aibox CLI into ./bin/aibox
+	go build -trimpath -ldflags "$(LDFLAGS)" -o $(AIBOX) ./cmd/aibox
+
+##@ Platform (thin wrappers around the CLI; PROFILE=local|aws-dev|aws-bench)
+
+.PHONY: up down models-sync smoke bench report cost doctor
+up: build ## Bring up the platform: aibox up --profile $(PROFILE)
+	$(AIBOX) up --profile $(PROFILE)
+down: build ## Tear down the platform: aibox down --profile $(PROFILE)
+	$(AIBOX) down --profile $(PROFILE)
+models-sync: build ## Mirror catalog models: aibox models sync --profile $(PROFILE)
+	$(AIBOX) models sync --profile $(PROFILE)
+smoke: build ## Smoke-test the platform: aibox smoke --profile $(PROFILE)
+	$(AIBOX) smoke --profile $(PROFILE)
+bench: build ## Run an experiment: aibox bench run $(EXP) --profile $(PROFILE)
+	$(AIBOX) bench run $(EXP) --profile $(PROFILE)
+report: build ## Generate the benchmark report: aibox report
+	$(AIBOX) report
+cost: build ## Show the run's accumulated cost: aibox cost --profile $(PROFILE)
+	$(AIBOX) cost --profile $(PROFILE)
+doctor: build ## Check prerequisites: aibox doctor --profile $(PROFILE)
+	$(AIBOX) doctor --profile $(PROFILE)
 
 ##@ Quality
 
