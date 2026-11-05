@@ -1,0 +1,5 @@
+profile: local
+apps:
+  - name: serving
+    namespace: aibox-serving
+    syncWave: 10
