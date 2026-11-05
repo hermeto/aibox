@@ -151,10 +151,11 @@ TF_DIRS := infra/terraform/aws infra/terraform/aws/bootstrap
 terraform-check: ## Terraform/OpenTofu: fmt, validate and mocked tests (no credentials)
 	$(TF) fmt -check -recursive infra/terraform
 	for d in $(TF_DIRS); do \
-		$(TF) -chdir=$$d init -backend=false -input=false -lockfile=readonly && \
+		$(TF) -chdir=$$d init -backend=false -input=false && \
 		$(TF) -chdir=$$d validate && \
 		$(TF) -chdir=$$d test || exit 1; \
 	done
+	hack/check-tf-lock.sh $(TF_DIRS)
 
 .PHONY: terraform-lint
 terraform-lint: ## tflint with the AWS ruleset (needs network for the plugin)
