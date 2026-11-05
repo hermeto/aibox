@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.parquet binary
+*.gz binary
+*.zip binary
+
+# Generated / lock files: collapse in diffs
+go.sum linguist-generated=true
+uv.lock linguist-generated=true
+.terraform.lock.hcl linguist-generated=true

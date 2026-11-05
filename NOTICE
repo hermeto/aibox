@@ -1,0 +1,10 @@
+AIBox — AI Platform in a Box
+Copyright 2026 The AIBox Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes or references third-party open-source components
+(Kubernetes, vLLM, SGLang, llm-d, KServe, KEDA, Karpenter, OpenTelemetry,
+Prometheus, Grafana and others). Each is distributed under its own license;
+no third-party source code is vendored in this repository unless stated in
+the file that contains it.

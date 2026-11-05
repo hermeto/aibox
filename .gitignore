@@ -1,0 +1,65 @@
+# --- Go ---
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+go.work
+go.work.sum
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# --- Terraform / OpenTofu ---
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# Generated, account-specific values (never commit)
+*.auto.tfvars
+generated/
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+
+# --- Benchmarks: large raw files live in Git LFS or outside git ---
+bench/results/**/raw/
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Tooling ---
+node_modules/
+.cache/

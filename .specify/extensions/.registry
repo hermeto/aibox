@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "git": {
+      "version": "1.0.3",
+      "source": "local",
+      "manifest_hash": "sha256:69b995053c85418e1b2b32e02aea5f52e8b34f01bc2888537bcb2a029b33ce05",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.git.feature",
+          "speckit.git.validate",
+          "speckit.git.remote",
+          "speckit.git.initialize",
+          "speckit.git.commit"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-11-05T01:24:25.764480+00:00"
+    }
+  }
+}
