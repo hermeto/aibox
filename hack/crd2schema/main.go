@@ -65,6 +65,7 @@ func convertFile(path, out string) error {
 	if err != nil {
 		return err
 	}
+	data = dropTemplateLines(data)
 	for _, doc := range bytes.Split(data, []byte("\n---")) {
 		if len(bytes.TrimSpace(doc)) == 0 {
 			continue
@@ -225,4 +226,17 @@ func stripDescriptions(node any) {
 			stripDescriptions(v)
 		}
 	}
+}
+
+// dropTemplateLines removes Helm template directives that wrap CRD files in some charts
+// (lines such as `{{- if .Values.crds.enabled }}`).
+func dropTemplateLines(data []byte) []byte {
+	var out [][]byte
+	for _, line := range bytes.Split(data, []byte("\n")) {
+		if bytes.HasPrefix(bytes.TrimSpace(line), []byte("{{")) {
+			continue
+		}
+		out = append(out, line)
+	}
+	return bytes.Join(out, []byte("\n"))
 }

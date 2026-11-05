@@ -1,0 +1,72 @@
+# Inference gateway (ADR-0003): Envoy Gateway with the Envoy AI Gateway (model routing from the
+# request body, /v1/models, token usage for rate limits), Redis for global rate-limit counters,
+# the aibox GatewayClass/Gateway, API-key authentication, a body size limit and the OpenAI-style
+# 404 for unknown models. Model routes come with the model servers (platform/serving).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmCharts:
+  - name: gateway-helm
+    repo: oci://docker.io/envoyproxy
+    version: v1.9.3
+    releaseName: eg
+    namespace: envoy-gateway-system
+    includeCRDs: true
+    valuesInline:
+      global:
+        images:
+          envoyGateway:
+            image: docker.io/envoyproxy/gateway:v1.9.3@sha256:192fc9bdadb6d2462e8cf7bd702ce3dd9648f3310c6038787448a1f509b7cd9f
+      config:
+        envoyGateway:
+          gateway:
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          provider:
+            type: Kubernetes
+          logging:
+            level:
+              default: info
+          extensionApis:
+            enableEnvoyPatchPolicy: true
+            enableBackend: true
+          # Settings the Envoy AI Gateway requires (its manifests/envoy-gateway-values.yaml).
+          extensionManager:
+            hooks:
+              xdsTranslator:
+                translation:
+                  listener: {includeAll: true}
+                  route: {includeAll: true}
+                  cluster: {includeAll: true}
+                  secret: {includeAll: true}
+                post: [Translation, Cluster, Route]
+            service:
+              fqdn:
+                hostname: ai-gateway-controller.envoy-ai-gateway-system.svc.cluster.local
+                port: 1063
+          rateLimit:
+            backend:
+              type: Redis
+              redis:
+                url: redis.envoy-gateway-system.svc.cluster.local:6379
+  - name: ai-gateway-crds-helm
+    repo: oci://docker.io/envoyproxy
+    version: v1.2.0
+    releaseName: aieg-crd
+    namespace: envoy-ai-gateway-system
+    includeCRDs: true
+  - name: ai-gateway-helm
+    repo: oci://docker.io/envoyproxy
+    version: v1.2.0
+    releaseName: aieg
+    namespace: envoy-ai-gateway-system
+    valuesInline:
+      controller:
+        image:
+          repository: docker.io/envoyproxy/ai-gateway-controller
+          tag: v1.2.0@sha256:4d663346354321a677c4e942017277f690d0d7715f8e3348a535db174679e4f8
+      extProc:
+        image:
+          repository: docker.io/envoyproxy/ai-gateway-extproc
+          tag: v1.2.0@sha256:4af909a6f64ee6b97968995fec88c4fd3c41d020c6bcb7ca07136fdfffaa598c
+resources:
+  - redis.yaml
+  - gateway.yaml

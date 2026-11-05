@@ -1,0 +1,108 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aibox
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: aibox
+    namespace: aibox-gateway
+---
+# Data-plane settings; overlays set how the Envoy Service is exposed.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: aibox
+  namespace: aibox-gateway
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: aibox
+  namespace: aibox-gateway
+spec:
+  gatewayClassName: aibox
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+# API keys: `Authorization: Bearer <key>` (Envoy strips "Bearer "), checked against the Secret
+# aibox-api-keys (client id -> key; created by `aibox up`, extended from the secret store). The
+# client id is forwarded for rate limits and logs; the key itself is removed.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-keys
+  namespace: aibox-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aibox
+  apiKeyAuth:
+    credentialRefs:
+      - name: aibox-api-keys
+    extractFrom:
+      - headers: [authorization]
+    forwardClientIDHeader: x-aibox-client
+    sanitize: true
+---
+# Requests the AI Gateway must buffer above 4 MiB are rejected with 413.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: limits
+  namespace: aibox-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aibox
+  connection:
+    bufferLimit: 4Mi
+---
+# Requests for models without a route fall through to this OpenAI-style 404.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: model-not-found
+  namespace: aibox-gateway
+spec:
+  directResponse:
+    contentType: application/json
+    statusCode: 404
+    body:
+      type: Inline
+      inline: '{"error":{"message":"The model does not exist or is not served by this AIBox environment.","type":"invalid_request_error","param":"model","code":"model_not_found"}}'
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: model-not-found
+  namespace: aibox-gateway
+spec:
+  parentRefs:
+    - name: aibox
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: model-not-found
