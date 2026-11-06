@@ -11,9 +11,12 @@ metadata:
 spec:
   namespaceSelector:
     matchNames: [aibox-serving]
+  # KServe owns app.kubernetes.io/part-of on the generated pods (it reserves that label for
+  # its cache selector), so select AIBox model servers by the label AIBox always adds.
   selector:
-    matchLabels:
-      app.kubernetes.io/part-of: aibox
+    matchExpressions:
+      - key: aibox.dev/model
+        operator: Exists
   podMetricsEndpoints:
     - port: http
       path: /metrics
