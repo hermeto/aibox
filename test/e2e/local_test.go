@@ -91,6 +91,9 @@ func TestLocalPlatform(t *testing.T) {
 	// Gateway (feature 009): auth, routing, streaming and rate limits.
 	checkGateway(t, root)
 
+	// Observability (feature 010): Prometheus, Tempo and Grafana.
+	checkObservability(t, root)
+
 	// Weight lifecycle (feature 007): mirror the tiny model into the in-cluster store, verify
 	// it from a pod, and check that a second sync uploads nothing.
 	for i, want := range []string{models.StatusSynced, models.StatusSkipped} {

@@ -1,0 +1,40 @@
+# Local profile: the same stack with small resources, NodePorts for the e2e assertions and
+# developer access (kind maps them to 127.0.0.1).
+#   30300 Grafana · 30301 Prometheus · 30302 Tempo HTTP
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - generated-rules.yaml
+patches:
+  - target:
+      kind: Service
+      name: monitoring-grafana
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30300
+  - target:
+      kind: Service
+      name: monitoring-kube-prometheus-prometheus
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30301
+  - target:
+      kind: Service
+      name: tempo
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      # tempo-prom-metrics is the HTTP API on 3200 (the other ports are Jaeger/Zipkin/OTLP).
+      - op: add
+        path: /spec/ports/2/nodePort
+        value: 30302

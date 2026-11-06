@@ -1,0 +1,47 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "SM utilization by GPU",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_GPU_UTIL", "legendFormat": "{{node}} GPU{{gpu}}"}]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "GPU memory used",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "bytes", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_FB_USED * 1024 * 1024", "legendFormat": "{{node}} GPU{{gpu}}"}]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GPU power draw",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "watt", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "DCGM_FI_DEV_POWER_USAGE", "legendFormat": "{{node}} GPU{{gpu}}"}]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "GPU hours in the last 24 h",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "count(count by (node) (DCGM_FI_DEV_GPU_UTIL)) * 24", "legendFormat": "GPU-hours"}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["aibox", "gpu"],
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "AIBox — GPU",
+  "uid": "aibox-gpu",
+  "version": 1
+}

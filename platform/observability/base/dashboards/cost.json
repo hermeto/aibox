@@ -1,0 +1,50 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "USD per hour by GPU pool",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:pool_cost_usd_per_hour", "legendFormat": "{{pool}}"}]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Cluster USD per hour",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:cluster_cost_usd_per_hour", "legendFormat": "cluster"}]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "USD per 1M output tokens (per model and cluster)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "aibox:usd_per_million_output_tokens", "legendFormat": "{{model}}"},
+        {"refId": "B", "expr": "aibox:cluster_usd_per_million_output_tokens", "legendFormat": "cluster"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Model USD per hour (GPU share)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:model_cost_usd_per_hour", "legendFormat": "{{model}}"}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["aibox", "cost"],
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "AIBox — Cost",
+  "uid": "aibox-cost",
+  "version": 1
+}

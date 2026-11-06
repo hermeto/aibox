@@ -12,5 +12,6 @@ Decisions are recorded with the MADR-based [template](template.md). Numbers are 
 | [0008](0008-cli-in-go-with-cobra.md) | CLI in Go with Cobra | Accepted | Feature 002 |
 | [0009](0009-gitops-with-argocd-app-of-apps.md) | GitOps with Argo CD app-of-apps | Accepted | Feature 003 |
 | [0010](0010-mandatory-budget-and-ttl.md) | Mandatory budget and TTL for cloud runs | Accepted | Feature 005 |
+| [0011](0011-prometheus-metrics-backend.md) | Prometheus (kube-prometheus-stack) as the metrics backend | Accepted | Feature 010 |
 
 Planned ADRs are listed in the product spec, [§A.10](../product/spec.md#a10-adr-index-planned).

@@ -1,0 +1,6 @@
+# aws-bench: ClusterIP only; benchmark runs export their own metrics snapshots.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - generated-rules.yaml

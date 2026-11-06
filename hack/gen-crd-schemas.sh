@@ -30,6 +30,9 @@ crds=(
   "eg-securitypolicies|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_securitypolicies.yaml"
   "aigw-aigatewayroutes|https://raw.githubusercontent.com/envoyproxy/ai-gateway/v1.2.0/manifests/charts/ai-gateway-crds-helm/templates/aigateway.envoyproxy.io_aigatewayroutes.yaml"
   "aigw-aiservicebackends|https://raw.githubusercontent.com/envoyproxy/ai-gateway/v1.2.0/manifests/charts/ai-gateway-crds-helm/templates/aigateway.envoyproxy.io_aiservicebackends.yaml"
+  "prometheus-servicemonitors|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml"
+  "prometheus-podmonitors|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml"
+  "prometheus-prometheusrules|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml"
 )
 
 mkdir -p hack/crds

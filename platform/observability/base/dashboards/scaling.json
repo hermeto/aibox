@@ -1,0 +1,50 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Model server replicas (desired vs available)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "kube_deployment_spec_replicas{namespace=\"aibox-serving\"}", "legendFormat": "{{deployment}} desired"},
+        {"refId": "B", "expr": "kube_deployment_status_replicas_available{namespace=\"aibox-serving\"}", "legendFormat": "{{deployment}} available"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Nodes by GPU class",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "sum by (label_aibox_dev_gpu_class) (kube_node_labels{label_aibox_dev_gpu_class!=\"\"})", "legendFormat": "{{label_aibox_dev_gpu_class}}"}]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Pods pending (Karpenter provisioning signal)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "short", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "sum by (namespace) (kube_pod_status_phase{phase=\"Pending\"})", "legendFormat": "{{namespace}}"}]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Scale-out phase timings (feature 012)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:scaletimer_pod_pending_seconds", "legendFormat": "pending {{phase}}"}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["aibox", "scaling"],
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "AIBox — Scaling",
+  "uid": "aibox-scaling",
+  "version": 1
+}
