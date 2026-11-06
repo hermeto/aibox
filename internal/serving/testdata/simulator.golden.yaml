@@ -14,7 +14,6 @@ spec:
   labels:
     aibox.dev/model: sim-llama-8b
     aibox.dev/runtime: simulator
-    app.kubernetes.io/part-of: aibox
   model:
     name: sim-llama-8b
     uri: hf://simulator/sim-llama-8b

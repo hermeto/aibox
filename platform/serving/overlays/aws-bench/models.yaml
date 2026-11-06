@@ -17,7 +17,6 @@ spec:
   labels:
     aibox.dev/model: qwen2.5-72b-awq
     aibox.dev/runtime: vllm
-    app.kubernetes.io/part-of: aibox
   model:
     name: qwen2.5-72b-awq
     uri: hf://Qwen/Qwen2.5-72B-Instruct-AWQ
@@ -171,7 +170,6 @@ spec:
   labels:
     aibox.dev/model: qwen3-32b-fp8
     aibox.dev/runtime: vllm
-    app.kubernetes.io/part-of: aibox
   model:
     name: qwen3-32b-fp8
     uri: hf://Qwen/Qwen3-32B-FP8
@@ -325,7 +323,6 @@ spec:
   labels:
     aibox.dev/model: qwen3-8b
     aibox.dev/runtime: vllm
-    app.kubernetes.io/part-of: aibox
   model:
     name: qwen3-8b
     uri: hf://Qwen/Qwen3-8B

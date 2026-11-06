@@ -14,7 +14,6 @@ spec:
   labels:
     aibox.dev/model: vllm-hf
     aibox.dev/runtime: vllm
-    app.kubernetes.io/part-of: aibox
   model:
     name: vllm-hf
     uri: hf://org/vllm-hf

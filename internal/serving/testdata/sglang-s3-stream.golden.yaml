@@ -14,7 +14,6 @@ spec:
   labels:
     aibox.dev/model: sglang-s3
     aibox.dev/runtime: sglang
-    app.kubernetes.io/part-of: aibox
   model:
     name: sglang-s3
     uri: hf://org/sglang-s3

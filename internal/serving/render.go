@@ -147,6 +147,16 @@ func Service(p *profile.Profile, m *models.Model) (map[string]any, error) {
 		"aibox.dev/runtime":         m.Runtime,
 		"app.kubernetes.io/part-of": "aibox",
 	}
+	// `spec.labels` is copied onto the generated Deployment and its pod template. KServe
+	// shares that label map with the Deployment selector, so overriding the reserved
+	// `app.kubernetes.io/part-of` key hides the Deployment from the controller's cache (which
+	// filters child resources by part-of=llminferenceservice) and every reconcile then fails
+	// with "deployment already exists". Keep only AIBox's own keys here; the pods still get
+	// `aibox.dev/model`/`aibox.dev/runtime` for the gateway and the PodMonitor.
+	specLabels := map[string]any{
+		"aibox.dev/model":   m.ID,
+		"aibox.dev/runtime": m.Runtime,
+	}
 	return map[string]any{
 		"apiVersion": "serving.kserve.io/v1alpha2",
 		"kind":       "LLMInferenceService",
@@ -165,7 +175,7 @@ func Service(p *profile.Profile, m *models.Model) (map[string]any, error) {
 			"storageInitializer": map[string]any{"enabled": false},
 			"replicas":           1,
 			"parallelism":        map[string]any{"tensor": m.TensorParallelSize},
-			"labels":             labels,
+			"labels":             specLabels,
 			"template":           pod,
 		},
 	}, nil
