@@ -1,0 +1,42 @@
+# Samples of the vllm v0.33.0 metric families AIBox depends on, in the Prometheus
+# text format the runtime's Python client writes (counters keep the _total suffix). Written from
+# the metric definitions in the pinned sources; see specs/008-inference-runtime/research.md.
+# HELP vllm:num_requests_waiting Requests queued and not yet scheduled.
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{engine="0",model_name="qwen3-8b"} 0.0
+# HELP vllm:num_requests_running Requests being processed.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{engine="0",model_name="qwen3-8b"} 0.0
+# HELP vllm:kv_cache_usage_perc Fraction of the KV cache in use (0-1).
+# TYPE vllm:kv_cache_usage_perc gauge
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3-8b"} 0.0
+# HELP vllm:time_to_first_token_seconds Time from request arrival to the first generated token.
+# TYPE vllm:time_to_first_token_seconds histogram
+vllm:time_to_first_token_seconds_bucket{engine="0",model_name="qwen3-8b",le="0.1"} 3.0
+vllm:time_to_first_token_seconds_bucket{engine="0",model_name="qwen3-8b",le="1.0"} 3.0
+vllm:time_to_first_token_seconds_bucket{engine="0",model_name="qwen3-8b",le="+Inf"} 3.0
+vllm:time_to_first_token_seconds_sum{engine="0",model_name="qwen3-8b"} 0.42
+vllm:time_to_first_token_seconds_count{engine="0",model_name="qwen3-8b"} 3.0
+# HELP vllm:inter_token_latency_seconds Time between consecutive generated tokens.
+# TYPE vllm:inter_token_latency_seconds histogram
+vllm:inter_token_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="0.1"} 3.0
+vllm:inter_token_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="1.0"} 3.0
+vllm:inter_token_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="+Inf"} 3.0
+vllm:inter_token_latency_seconds_sum{engine="0",model_name="qwen3-8b"} 0.42
+vllm:inter_token_latency_seconds_count{engine="0",model_name="qwen3-8b"} 3.0
+# HELP vllm:e2e_request_latency_seconds End-to-end request latency in the server.
+# TYPE vllm:e2e_request_latency_seconds histogram
+vllm:e2e_request_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="0.1"} 3.0
+vllm:e2e_request_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="1.0"} 3.0
+vllm:e2e_request_latency_seconds_bucket{engine="0",model_name="qwen3-8b",le="+Inf"} 3.0
+vllm:e2e_request_latency_seconds_sum{engine="0",model_name="qwen3-8b"} 0.42
+vllm:e2e_request_latency_seconds_count{engine="0",model_name="qwen3-8b"} 3.0
+# HELP vllm:prompt_tokens_total Prompt (prefill) tokens processed.
+# TYPE vllm:prompt_tokens_total counter
+vllm:prompt_tokens_total{engine="0",model_name="qwen3-8b"} 128.0
+# HELP vllm:generation_tokens_total Tokens generated.
+# TYPE vllm:generation_tokens_total counter
+vllm:generation_tokens_total{engine="0",model_name="qwen3-8b"} 128.0
+# HELP vllm:request_success_total Requests finished.
+# TYPE vllm:request_success_total counter
+vllm:request_success_total{engine="0",model_name="qwen3-8b"} 128.0

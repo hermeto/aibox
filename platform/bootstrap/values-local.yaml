@@ -1,8 +1,16 @@
 profile: local
 apps:
+  - name: cert-manager
+    namespace: cert-manager
+    syncWave: -2
+    path: platform/cert-manager/base
   - name: secrets
     namespace: external-secrets
     syncWave: -1
+  - name: kserve
+    namespace: kserve
+    syncWave: -1
+    path: platform/kserve/base
   - name: models
     namespace: aibox-models
     syncWave: 0

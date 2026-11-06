@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/hermeto/aibox/internal/kube"
 	"github.com/hermeto/aibox/internal/models"
+	"github.com/hermeto/aibox/internal/platform"
 	"github.com/hermeto/aibox/internal/profile"
 )
 
@@ -155,4 +157,30 @@ func (a *App) modelTarget(p *profile.Profile) (models.JobAPI, models.Target, err
 	}
 	api, err := connect(kubeconfig, kubeContext)
 	return api, models.Target{Bucket: bucket, Region: p.Spec.AWS.Region}, err
+}
+
+// serveModels mirrors the profile's enabled models and then deploys the model servers
+// (cloud bring-up). Without mirrored weights the servers would hold GPU nodes while failing.
+func (a *App) serveModels(ctx context.Context, p *profile.Profile, aws *platform.AWS, timeout time.Duration) error {
+	c, err := models.Load(models.DefaultPath())
+	if err != nil {
+		return err
+	}
+	sel, err := c.Select(p.Metadata.Name, false, nil)
+	if err != nil {
+		return err
+	}
+	api, target, err := a.modelTarget(p)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(a.Err, "Mirroring %d model(s) to s3://%s before deploying the model servers\n", len(sel), target.Bucket)
+	rep := (&models.Syncer{API: api, Target: target, Verify: true, PollInterval: a.pollInterval(), Log: a.Err}).Sync(ctx, sel)
+	rep.Profile = p.Metadata.Name
+	if failed := rep.Failed(); len(failed) > 0 {
+		_ = rep.RenderText(a.Err)
+		return fmt.Errorf("model sync failed for %s; model servers not deployed (fix, then run `aibox up` again)", strings.Join(failed, ", "))
+	}
+	_, _ = fmt.Fprintln(a.Err, "Weights mirrored; deploying the model servers")
+	return aws.EnableServing(ctx, timeout)
 }

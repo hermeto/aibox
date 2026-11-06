@@ -15,6 +15,7 @@ import (
 
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
+	"github.com/hermeto/aibox/internal/serving"
 )
 
 // gitops installs Argo CD and drives the app-of-apps for any profile.
@@ -29,6 +30,44 @@ type gitops struct {
 	// Kubeconfig is an explicit kubeconfig file ("" = default loading rules).
 	Kubeconfig   string
 	PollInterval time.Duration
+	// ModelsReady deploys the components that need mirrored weights (cloud model servers).
+	ModelsReady bool
+	// WeightsBucket and Region are written to the run ConfigMap the model servers read.
+	WeightsBucket string
+	Region        string
+}
+
+// active returns the components the root Application deploys in the current state.
+func (g *gitops) active(comps []Component) []Component {
+	var out []Component
+	for _, c := range comps {
+		if !c.RequiresModels || g.ModelsReady {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// applyRunConfig writes the aibox-run ConfigMap (run id, weights bucket, region) into the
+// serving namespace; model servers read the bucket from it at runtime, so no account data
+// ends up in git.
+func (g *gitops) applyRunConfig(ctx context.Context, k KubeAPI) error {
+	ns := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1", "kind": "Namespace",
+		"metadata": map[string]any{"name": serving.Namespace, "labels": map[string]any{"app.kubernetes.io/part-of": "aibox"}},
+	}}
+	if err := k.Apply(ctx, kube.Namespaces, ns); err != nil {
+		return err
+	}
+	cm := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1", "kind": "ConfigMap",
+		"metadata": map[string]any{"name": serving.RunConfigMap, "namespace": serving.Namespace,
+			"labels": map[string]any{"app.kubernetes.io/part-of": "aibox"}},
+		"data": map[string]any{
+			"profile": g.ProfileName, "runId": g.RunID, "weightsBucket": g.WeightsBucket, "region": g.Region,
+		},
+	}}
+	return k.Apply(ctx, kube.ConfigMaps, cm)
 }
 
 func (g *gitops) logf(format string, args ...any) {
@@ -46,10 +85,14 @@ func (g *gitops) poll() time.Duration {
 
 // bootstrap applies the root Application and waits for every Application to be ready.
 func (g *gitops) bootstrap(ctx context.Context, k KubeAPI, src GitSource, comps []Component) error {
+	if err := g.applyRunConfig(ctx, k); err != nil {
+		return fmt.Errorf("run config: %w", err)
+	}
 	g.logf("Applying root Application %s", RootAppName)
-	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName, g.RunID)); err != nil {
+	if err := k.Apply(ctx, kube.Applications, RootApplication(src, g.ProfileName, RootParams{RunID: g.RunID, ModelsReady: g.ModelsReady})); err != nil {
 		return err
 	}
+	comps = g.active(comps)
 	if err := g.waitApplications(ctx, k, comps); err != nil {
 		g.diagnostics(ctx, k, comps)
 		return err
@@ -77,15 +120,25 @@ func (g *gitops) installArgoCD(ctx context.Context) error {
 	return nil
 }
 
-// RootApplication renders the app-of-apps root for a profile. runID (cloud profiles) is
-// passed to the bootstrap chart to tag Karpenter-launched instances.
-func RootApplication(src GitSource, profileName, runID string) *unstructured.Unstructured {
+// RootParams are the run-specific bootstrap chart parameters.
+type RootParams struct {
+	// RunID (cloud profiles) tags Karpenter-launched instances.
+	RunID string
+	// ModelsReady deploys components that need mirrored weights.
+	ModelsReady bool
+}
+
+// RootApplication renders the app-of-apps root for a profile.
+func RootApplication(src GitSource, profileName string, rp RootParams) *unstructured.Unstructured {
 	params := []any{
 		map[string]any{"name": "repoURL", "value": src.RepoURL},
 		map[string]any{"name": "targetRevision", "value": src.Revision},
 	}
-	if runID != "" {
-		params = append(params, map[string]any{"name": "runId", "value": runID})
+	if rp.RunID != "" {
+		params = append(params, map[string]any{"name": "runId", "value": rp.RunID})
+	}
+	if rp.ModelsReady {
+		params = append(params, map[string]any{"name": "modelsReady", "value": "true"})
 	}
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "argoproj.io/v1alpha1",

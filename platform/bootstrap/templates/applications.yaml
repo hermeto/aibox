@@ -1,4 +1,5 @@
 {{- range .Values.apps }}
+{{- if or (not .requiresModels) $.Values.modelsReady }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -39,10 +40,13 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      # Custom resources may arrive in the same sync as their CRDs (charts with CRDs).
+      - SkipDryRunOnMissingResource=true
     retry:
       limit: 10
       backoff:
         duration: 10s
         factor: 2
         maxDuration: 2m
+{{- end }}
 {{- end }}

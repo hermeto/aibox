@@ -20,6 +20,7 @@ import (
 	"github.com/hermeto/aibox/internal/doctor"
 	"github.com/hermeto/aibox/internal/exec"
 	"github.com/hermeto/aibox/internal/kube"
+	"github.com/hermeto/aibox/internal/models"
 	"github.com/hermeto/aibox/internal/platform"
 )
 
@@ -31,7 +32,7 @@ func (fakeKube) Apply(context.Context, schema.GroupVersionResource, *unstructure
 }
 func (fakeKube) ListApplications(context.Context, string) ([]kube.AppStatus, error) {
 	var apps []kube.AppStatus
-	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models"} {
+	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps, nil
@@ -128,7 +129,7 @@ func awsApp(t *testing.T) *App {
 		OnPrefix(tf+" plan", exec.Result{}, nil).
 		OnPrefix(tf+" apply", exec.Result{}, nil).
 		OnPrefix(tf+" destroy", exec.Result{}, nil).
-		On(tf+" output -json", exec.Result{Stdout: `{"cluster_name":{"value":"aibox-dev"},"cluster_endpoint":{"value":"https://example.invalid"},"cluster_certificate_authority_data":{"value":"Y2E="},"region":{"value":"us-east-1"}}`}, nil).
+		On(tf+" output -json", exec.Result{Stdout: `{"cluster_name":{"value":"aibox-dev"},"cluster_endpoint":{"value":"https://example.invalid"},"cluster_certificate_authority_data":{"value":"Y2E="},"region":{"value":"us-east-1"},"weights_bucket":{"value":"aibox-weights-aibox-dev-000000000000"}}`}, nil).
 		OnPrefix("helm upgrade --install argocd", exec.Result{}, nil)
 	stateDir := t.TempDir()
 	return &App{
@@ -137,6 +138,9 @@ func awsApp(t *testing.T) *App {
 		Account:  func(context.Context, string) (string, error) { return "000000000000", nil },
 		EgressIP: func(context.Context) (string, error) { return "203.0.113.10", nil },
 		KubeFile: func(string, string) (platform.KubeAPI, error) { return fakeKube{}, nil },
+		Jobs: func(string, string) (models.JobAPI, error) {
+			return &fakeJobs{jobs: map[string]kube.JobState{}}, nil
+		},
 		CostClients: func(context.Context, string) (cost.EC2API, cost.ELBAPI, error) {
 			return noResources{}, noResources{}, nil
 		},
@@ -170,6 +174,10 @@ func TestUpAndDownAWSWithFakes(t *testing.T) {
 	var res platform.AWSUpResult
 	if err := json.Unmarshal([]byte(r.stdout), &res); err != nil || !strings.HasPrefix(res.RunID, "aws-dev-") {
 		t.Fatalf("%q %v", r.stdout, err)
+	}
+	// Weights are mirrored before the model servers are deployed.
+	if !strings.Contains(r.stderr, "Mirroring 1 model(s) to s3://aibox-weights-aibox-dev-000000000000") || !strings.Contains(r.stderr, "Weights mirrored; deploying the model servers") {
+		t.Fatalf("model sync before serving missing:\n%s", r.stderr)
 	}
 	app.In = strings.NewReader("no\n")
 	r = runCLI(t, app, "down", "--profile", "aws-dev")

@@ -1,0 +1,195 @@
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  annotations:
+    aibox.dev/load-method: nvme-cache
+    aibox.dev/revision: 0123456789abcdef0123456789abcdef01234567
+  labels:
+    aibox.dev/model: vllm-nvme
+    aibox.dev/runtime: vllm
+    app.kubernetes.io/part-of: aibox
+  name: vllm-nvme
+  namespace: aibox-serving
+spec:
+  labels:
+    aibox.dev/model: vllm-nvme
+    aibox.dev/runtime: vllm
+  model:
+    name: vllm-nvme
+    uri: hf://org/vllm-nvme
+  parallelism:
+    tensor: 1
+  replicas: 1
+  storageInitializer:
+    enabled: false
+  template:
+    containers:
+    - args:
+      - /models/vllm-nvme
+      - --served-model-name
+      - vllm-nvme
+      - --port
+      - "8000"
+      - --tensor-parallel-size
+      - "1"
+      - --max-model-len
+      - "8192"
+      - --shutdown-timeout
+      - "280"
+      - --gpu-memory-utilization
+      - "0.9"
+      - --max-num-seqs
+      - "64"
+      - --kv-cache-dtype
+      - fp8
+      - --no-enable-prefix-caching
+      - --no-enable-chunked-prefill
+      - --quantization
+      - fp8
+      - --seed
+      - "1"
+      command:
+      - vllm
+      - serve
+      env:
+      - name: AIBOX_MODEL_ID
+        value: vllm-nvme
+      - name: AIBOX_STARTUP_TIMEOUT
+        value: "1800"
+      image: vllm/vllm-openai:v0.33.0@sha256:d825baf9ce4b1b6bfc5ecc7b79880c7e6748c65a72d697ce3d47607aafa84c6e
+      lifecycle:
+        postStart:
+          exec:
+            command:
+            - python3
+            - -c
+            - |
+              # postStart hook of AIBox model servers: wait until the server is healthy, then send one
+              # 1-token completion. Kubernetes starts no probes before the hook returns, so the server
+              # becomes ready only after its weights are loaded and a request succeeded.
+              import json, os, sys, time, urllib.request  # noqa: E401
+
+              base = "http://127.0.0.1:8000"
+              deadline = time.time() + float(os.environ.get("AIBOX_STARTUP_TIMEOUT", "1800"))
+              while time.time() < deadline:
+                  try:
+                      with urllib.request.urlopen(base + "/health", timeout=5) as r:
+                          if r.status == 200:
+                              break
+                  except Exception:
+                      pass
+                  time.sleep(5)
+              else:
+                  sys.exit("model server not healthy before the startup timeout")
+              body = json.dumps({"model": os.environ["AIBOX_MODEL_ID"], "prompt": "Hello", "max_tokens": 1}).encode()
+              req = urllib.request.Request(base + "/v1/completions", data=body, headers={"Content-Type": "application/json"})
+              with urllib.request.urlopen(req, timeout=300) as r:
+                  if r.status != 200:
+                      sys.exit(f"warm-up request failed: HTTP {r.status}")
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /health
+          port: 8000
+        periodSeconds: 10
+        timeoutSeconds: 5
+      name: main
+      ports:
+      - containerPort: 8000
+        name: http
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /health
+          port: 8000
+        periodSeconds: 5
+        timeoutSeconds: 5
+      resources:
+        limits:
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "4"
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+      startupProbe:
+        failureThreshold: 180
+        httpGet:
+          path: /health
+          port: 8000
+        periodSeconds: 10
+        timeoutSeconds: 5
+    initContainers:
+    - command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p "$HOME" "$TMPDIR"
+        python -m pip install --quiet --require-hashes --only-binary=:all: --target /work/py -r /scripts/requirements.txt
+        PYTHONPATH=/work/py exec python /scripts/mirror.py fetch
+      env:
+      - name: BUCKET
+        valueFrom:
+          configMapKeyRef:
+            key: weightsBucket
+            name: aibox-run
+            optional: true
+      - name: AWS_REGION
+        valueFrom:
+          configMapKeyRef:
+            key: region
+            name: aibox-run
+            optional: true
+      - name: PREFIX
+        value: models/vllm-nvme/0123456789abcdef0123456789abcdef01234567/
+      - name: DEST
+        value: /models/vllm-nvme
+      - name: HOME
+        value: /work/home
+      - name: TMPDIR
+        value: /work/tmp
+      - name: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - name: PIP_DISABLE_PIP_VERSION_CHECK
+        value: "1"
+      - name: PIP_NO_CACHE_DIR
+        value: "1"
+      image: python:3.14.10-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966
+      name: fetch-weights
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+      volumeMounts:
+      - mountPath: /models
+        name: model-cache
+      - mountPath: /scripts
+        name: fetch-scripts
+        readOnly: true
+      - mountPath: /work
+        name: fetch-work
+    nodeSelector:
+      aibox.dev/gpu-class: gpu-l4
+    securityContext:
+      fsGroup: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      runAsUser: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccountName: model-server
+    terminationGracePeriodSeconds: 300
+    tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists
+    volumes:
+    - configMap:
+        name: model-fetch-scripts
+      name: fetch-scripts
+    - emptyDir: {}
+      name: fetch-work

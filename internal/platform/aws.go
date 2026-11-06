@@ -59,6 +59,9 @@ type RunState struct {
 	RepoURL       string    `json:"repoURL"`
 	Revision      string    `json:"revision"`
 	TeardownRole  string    `json:"teardownRoleArn,omitempty"`
+	// ModelsReady is set once `aibox up` mirrored the weights and deployed the model servers;
+	// later bring-ups keep them deployed.
+	ModelsReady bool `json:"modelsReady,omitempty"`
 }
 
 // AWS brings AWS profiles up and down with Terraform/OpenTofu. Every command goes through
@@ -459,7 +462,7 @@ func (a *AWS) Up(ctx context.Context, opts AWSUpOptions) (*AWSUpResult, error) {
 		return nil, err
 	}
 	res.Kubeconfig = kubeconfig
-	if err := a.bootstrapGitOps(ctx, kubeconfig, src, rs.RunID, opts.Timeout); err != nil {
+	if err := a.bootstrapGitOps(ctx, kubeconfig, src, rs, outputString(out.Stdout, "weights_bucket"), opts.Timeout); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -474,14 +477,15 @@ func firstNonEmptyString(vals ...string) string {
 	return ""
 }
 
-func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSource, runID string, timeout time.Duration) error {
+func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSource, rs *RunState, bucket string, timeout time.Duration) error {
 	comps, err := LoadComponents(a.Root, a.Profile.Metadata.Name)
 	if err != nil {
 		return err
 	}
 	wctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	g := &gitops{Runner: a.Runner, Root: a.Root, Log: a.Log, ProfileName: a.Profile.Metadata.Name, KubeContext: a.KubeContext(), Kubeconfig: kubeconfig, RunID: runID, PollInterval: a.PollInterval}
+	g := &gitops{Runner: a.Runner, Root: a.Root, Log: a.Log, ProfileName: a.Profile.Metadata.Name, KubeContext: a.KubeContext(), Kubeconfig: kubeconfig,
+		RunID: rs.RunID, PollInterval: a.PollInterval, ModelsReady: rs.ModelsReady, WeightsBucket: bucket, Region: rs.Region}
 	if err := g.installArgoCD(wctx); err != nil {
 		return err
 	}
@@ -497,6 +501,44 @@ func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSou
 
 type tfOutput struct {
 	Value any `json:"value"`
+}
+
+// outputString returns one string output from `terraform output -json`.
+func outputString(outputsJSON, key string) string {
+	var outs map[string]tfOutput
+	if json.Unmarshal([]byte(outputsJSON), &outs) != nil {
+		return ""
+	}
+	v, _ := outs[key].Value.(string)
+	return v
+}
+
+// EnableServing deploys the components that need mirrored weights (the model servers) by
+// re-applying the root Application with modelsReady, waits for them and records the state.
+// Run it after the weights of the profile's models are mirrored (`aibox models sync`).
+func (a *AWS) EnableServing(ctx context.Context, timeout time.Duration) error {
+	rs, err := a.loadRun()
+	if err != nil {
+		return err
+	}
+	if rs == nil {
+		return ErrNoActiveRun
+	}
+	kubeconfig, _, outs, err := a.ActiveCluster()
+	if err != nil {
+		return err
+	}
+	bucket, _ := outs["weights_bucket"].(string)
+	rs.ModelsReady = true
+	if a.DryRun {
+		a.logf("[dry-run] would deploy the model servers (modelsReady=true)")
+		return nil
+	}
+	if err := a.bootstrapGitOps(ctx, kubeconfig, GitSource{RepoURL: rs.RepoURL, Revision: rs.Revision}, rs, bucket, timeout); err != nil {
+		return err
+	}
+	_, err = a.writeJSON("run.json", rs)
+	return err
 }
 
 // writeKubeconfig renders a kubeconfig that authenticates with `aws eks get-token`.

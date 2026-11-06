@@ -77,17 +77,21 @@ func kindGPUNodes(t *testing.T) []node {
 	return nodes
 }
 
+// podSpecs returns the pod specs of workloads: Deployments and StatefulSets, and KServe
+// LLMInferenceServices (whose spec.template is a PodSpec).
 func podSpecs(objs []map[string]any) map[string]map[string]any {
 	out := map[string]map[string]any{}
 	for _, o := range objs {
-		if o["kind"] != "Deployment" && o["kind"] != "StatefulSet" {
-			continue
-		}
 		spec, _ := o["spec"].(map[string]any)
 		tmpl, _ := spec["template"].(map[string]any)
-		ps, _ := tmpl["spec"].(map[string]any)
 		meta, _ := o["metadata"].(map[string]any)
-		out[meta["name"].(string)] = ps
+		switch o["kind"] {
+		case "Deployment", "StatefulSet":
+			ps, _ := tmpl["spec"].(map[string]any)
+			out[meta["name"].(string)] = ps
+		case "LLMInferenceService":
+			out[meta["name"].(string)] = tmpl
+		}
 	}
 	return out
 }
@@ -149,5 +153,58 @@ func TestSchedulableRules(t *testing.T) {
 	wrong := map[string]any{"nodeSelector": map[string]any{"aibox.dev/gpu-class": "gpu-a10g"}, "tolerations": ok["tolerations"]}
 	if schedulable(wrong, n) {
 		t.Fatal("pod selecting another class must not schedule")
+	}
+}
+
+// poolNodes reads the labels and taints Karpenter puts on a profile's GPU nodes.
+func poolNodes(t *testing.T, profile string) []node {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "platform", "gpu", "overlays", profile, "nodepools.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var nodes []node
+	for _, doc := range strings.Split(string(data), "\n---") {
+		var np struct {
+			Kind string `json:"kind"`
+			Spec struct {
+				Template struct {
+					Metadata struct {
+						Labels map[string]string `json:"labels"`
+					} `json:"metadata"`
+					Spec struct {
+						Taints []struct{ Key, Value, Effect string } `json:"taints"`
+					} `json:"spec"`
+				} `json:"template"`
+			} `json:"spec"`
+		}
+		if err := yaml.Unmarshal([]byte(doc), &np); err != nil || np.Kind != "NodePool" {
+			continue
+		}
+		n := node{labels: np.Spec.Template.Metadata.Labels}
+		for _, tt := range np.Spec.Template.Spec.Taints {
+			n.taints = append(n.taints, tt.Key+"="+tt.Value+":"+tt.Effect)
+		}
+		nodes = append(nodes, n)
+	}
+	return nodes
+}
+
+func TestCloudServingMatchesGPUPools(t *testing.T) {
+	for _, profile := range []string{"aws-dev", "aws-bench"} {
+		pools := poolNodes(t, profile)
+		pods := podSpecs(build(t, "platform/serving/overlays/"+profile))
+		if len(pools) == 0 || len(pods) == 0 {
+			t.Fatalf("%s: %d pools, %d model servers", profile, len(pools), len(pods))
+		}
+		for name, ps := range pods {
+			ok := false
+			for _, n := range pools {
+				ok = ok || schedulable(ps, n)
+			}
+			if !ok {
+				t.Errorf("%s: model server %s matches no GPU pool", profile, name)
+			}
+		}
 	}
 }

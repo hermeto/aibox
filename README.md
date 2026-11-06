@@ -58,6 +58,13 @@ its runtime, GPU class, tensor parallelism, loading method and SLO targets
 storage with in-cluster Jobs and verifies every checksum; see
 [docs/runbooks/model-weights.md](docs/runbooks/model-weights.md).
 
+Each enabled model is served by a KServe `LLMInferenceService` generated from the catalog
+(`aibox render serving`, [ADR-0002](docs/adr/0002-kserve-llminferenceservice.md)): vLLM by
+default, SGLang with `runtime: sglang`, the llm-d simulator on kind. The metrics AIBox relies on
+are mapped per runtime in [metrics/runtime-metrics.yaml](metrics/runtime-metrics.yaml); servers
+that do not become ready are covered in
+[docs/runbooks/model-load-failures.md](docs/runbooks/model-load-failures.md).
+
 ## The `aibox` CLI
 
 ```bash

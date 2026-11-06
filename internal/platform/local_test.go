@@ -71,7 +71,7 @@ func gitFake() *exec.Fake {
 
 func readyApps() []kube.AppStatus {
 	var apps []kube.AppStatus
-	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu", "secrets", "models"} {
+	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps
@@ -100,10 +100,14 @@ func TestUpCreatesClusterAndAppliesRoot(t *testing.T) {
 	if !strings.Contains(log.String(), "2 local commit(s) are not pushed") {
 		t.Fatalf("missing unpushed warning:\n%s", log)
 	}
-	if len(k.applied) != 1 || k.applied[0].GetName() != RootAppName {
+	// Namespace and run ConfigMap for the model servers, then the root Application.
+	if len(k.applied) != 3 || k.applied[0].GetKind() != "Namespace" || k.applied[1].GetName() != "aibox-run" || k.applied[2].GetName() != RootAppName {
 		t.Fatalf("applied %v", k.applied)
 	}
-	params, _, _ := unstructured.NestedSlice(k.applied[0].Object, "spec", "source", "helm", "parameters")
+	if bucket, _, _ := unstructured.NestedString(k.applied[1].Object, "data", "weightsBucket"); bucket != "aibox-weights" {
+		t.Fatalf("run config %v", k.applied[1].Object)
+	}
+	params, _, _ := unstructured.NestedSlice(k.applied[2].Object, "spec", "source", "helm", "parameters")
 	if len(params) != 2 {
 		t.Fatalf("helm parameters %v", params)
 	}
@@ -233,7 +237,7 @@ func TestDown(t *testing.T) {
 func TestComponentsAndVersionCheck(t *testing.T) {
 	l, _ := newLocal(t, exec.NewFake(), nil)
 	comps, err := l.Components()
-	if err != nil || len(comps) != 3 || comps[0].Name != "secrets" || comps[2].Path != "platform/serving/overlays/local" {
+	if err != nil || len(comps) != 5 || comps[0].Name != "cert-manager" || comps[0].Path != "platform/cert-manager/base" || comps[4].Path != "platform/serving/overlays/local" {
 		t.Fatalf("%v %v", comps, err)
 	}
 	cfg := filepath.Join(repoRoot(t), "infra", "local", "kind-config.yaml")

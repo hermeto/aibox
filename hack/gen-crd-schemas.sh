@@ -13,6 +13,12 @@ crds=(
   "karpenter-ec2nodeclasses|https://raw.githubusercontent.com/aws/karpenter-provider-aws/v1.15.1/pkg/apis/crds/karpenter.k8s.aws_ec2nodeclasses.yaml"
   "eso-clustersecretstores|https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.14.0/config/crds/bases/external-secrets.io_clustersecretstores.yaml"
   "eso-externalsecrets|https://raw.githubusercontent.com/external-secrets/external-secrets/helm-chart-2.14.0/config/crds/bases/external-secrets.io_externalsecrets.yaml"
+  "kserve-llminferenceservices|https://raw.githubusercontent.com/kserve/kserve/v0.21.0/config/crd/full/llmisvc/serving.kserve.io_llminferenceservices.yaml"
+  "kserve-llminferenceserviceconfigs|https://raw.githubusercontent.com/kserve/kserve/v0.21.0/config/crd/full/llmisvc/serving.kserve.io_llminferenceserviceconfigs.yaml"
+  "kserve-clusterstoragecontainers|https://raw.githubusercontent.com/kserve/kserve/v0.21.0/charts/kserve-llmisvc-crd/files/serving.kserve.io_clusterstoragecontainers.yaml"
+  "cert-manager-issuers|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_issuers.yaml"
+  "cert-manager-clusterissuers|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_clusterissuers.yaml"
+  "cert-manager-certificates|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_certificates.yaml"
 )
 
 mkdir -p hack/crds

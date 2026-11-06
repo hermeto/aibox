@@ -1,0 +1,55 @@
+# Runtime metrics AIBox depends on (observability, autoscaling, routing and the report), as
+# canonical names mapped to each runtime's metric family. Names were checked in the sources of
+# the pinned versions (specs/008-inference-runtime/research.md); test/contract enforces them.
+# The local simulator exposes the vLLM names.
+apiVersion: aibox.dev/v1alpha1
+kind: RuntimeMetrics
+runtimes:
+  vllm: v0.33.0
+  sglang: v0.5.23
+metrics:
+  - name: requests_waiting
+    type: gauge
+    help: Requests queued and not yet scheduled.
+    vllm: vllm:num_requests_waiting
+    sglang: sglang:num_queue_reqs
+  - name: requests_running
+    type: gauge
+    help: Requests being processed.
+    vllm: vllm:num_requests_running
+    sglang: sglang:num_running_reqs
+  - name: kv_cache_usage_ratio
+    type: gauge
+    help: Fraction of the KV cache in use (0-1).
+    vllm: vllm:kv_cache_usage_perc
+    sglang: sglang:token_usage
+  - name: time_to_first_token_seconds
+    type: histogram
+    help: Time from request arrival to the first generated token.
+    vllm: vllm:time_to_first_token_seconds
+    sglang: sglang:time_to_first_token_seconds
+  - name: inter_token_latency_seconds
+    type: histogram
+    help: Time between consecutive generated tokens.
+    vllm: vllm:inter_token_latency_seconds
+    sglang: sglang:inter_token_latency_seconds
+  - name: e2e_request_latency_seconds
+    type: histogram
+    help: End-to-end request latency in the server.
+    vllm: vllm:e2e_request_latency_seconds
+    sglang: sglang:e2e_request_latency_seconds
+  - name: prompt_tokens_total
+    type: counter
+    help: Prompt (prefill) tokens processed.
+    vllm: vllm:prompt_tokens_total
+    sglang: sglang:prompt_tokens_total
+  - name: generation_tokens_total
+    type: counter
+    help: Tokens generated.
+    vllm: vllm:generation_tokens_total
+    sglang: sglang:generation_tokens_total
+  - name: requests_finished_total
+    type: counter
+    help: Requests finished.
+    vllm: vllm:request_success_total
+    sglang: sglang:num_requests_total

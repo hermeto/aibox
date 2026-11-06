@@ -1,0 +1,39 @@
+# The llmisvc controller, its webhooks and the LLMInferenceServiceConfig presets.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kserve
+helmCharts:
+  - name: kserve-llmisvc-resources
+    repo: oci://ghcr.io/kserve/charts
+    version: v0.21.0
+    releaseName: kserve-llmisvc
+    namespace: kserve
+    valuesInline:
+      kserve:
+        llmisvc:
+          controller:
+            tag: v0.21.0@sha256:be2261cc76509324d80a5b9998cd35c9d9e8d681453f21223c37fe0b5ea9f52c
+  # The LLMInferenceServiceConfig presets (kserve-config-llm-template and friends) that every
+  # LLMInferenceService is merged onto; AIBox overrides their main container.
+  - name: kserve-runtime-configs
+    repo: oci://ghcr.io/kserve/charts
+    version: v0.21.0
+    releaseName: kserve-runtime-configs
+    namespace: kserve
+    valuesInline:
+      kserve:
+        llmisvcConfigs:
+          enabled: true
+# Images referenced by the presets (llm-d runtime, scheduler and predictors used by features
+# 011/012), pinned with digests resolved in CI; Kustomize rewrites containers in any resource.
+images:
+  - name: ghcr.io/llm-d/llm-d-cuda
+    digest: sha256:094fb7bc018af54cb6a93999f72b0f38b7c89960f285f3718fbd95adc192fc27
+  - name: ghcr.io/llm-d/llm-d-latency-predictor-prediction-server
+    digest: sha256:7377707db2efac33fed3740b3d541bd4c045b240195e03453a6e33e86d69eba3
+  - name: ghcr.io/llm-d/llm-d-latency-predictor-training-server
+    digest: sha256:5679d69a8603fb555578c5b5e319eb856acda058ddee1355e5d3b1f662701761
+  - name: ghcr.io/llm-d/llm-d-router-disagg-sidecar
+    digest: sha256:fe7b0bbd09be6695e094ba9a512fb947532c28c6c3565408c8c28a9dc5423da0
+  - name: ghcr.io/llm-d/llm-d-router-endpoint-picker
+    digest: sha256:2e516fa1310da7be59b82beb1445362139597d6d553ef04d546716abe3aaaa70

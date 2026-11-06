@@ -119,6 +119,10 @@ jobs:
           AIBOX_E2E_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
           AIBOX_E2E_KEEP: "1"
         run: go test -tags e2e ./test/e2e/... -run TestLocalPlatform -timeout 30m -count=1 -v
+      - name: Runtime metric contract (simulator served by KServe)
+        env:
+          AIBOX_METRICS_URL: http://127.0.0.1:30080/metrics
+        run: go test ./test/contract/... -run TestRuntimeMetrics -count=1 -v
       - name: Running images (digests)
         if: always()
         run: |
@@ -133,6 +137,8 @@ jobs:
           kubectl --context kind-aibox-local get externalsecrets,clustersecretstores -A -o wide || true
           kubectl --context kind-aibox-local -n aibox-models logs -l app.kubernetes.io/name=model-sync --tail=100 --prefix || true
           kubectl --context kind-aibox-local -n aibox-models logs deploy/seaweedfs --tail=50 || true
+          kubectl --context kind-aibox-local get llminferenceservices -A -o yaml || true
+          kubectl --context kind-aibox-local -n kserve logs deploy/llmisvc-controller-manager --tail=100 || true
       - name: down
         if: always()
         run: go run ./cmd/aibox down --profile local

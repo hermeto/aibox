@@ -58,6 +58,32 @@ type Model struct {
 	RuntimeFlags       *RuntimeFlags `json:"runtimeFlags,omitempty"`
 	LoadMethod         string        `json:"loadMethod"`
 	SLO                SLO           `json:"slo"`
+	// StartupTimeoutSeconds bounds weight loading plus the warm-up request (default 1800).
+	StartupTimeoutSeconds int `json:"startupTimeoutSeconds,omitempty"`
+	// ShutdownGracePeriodSeconds bounds draining on shutdown (default 120).
+	ShutdownGracePeriodSeconds int `json:"shutdownGracePeriodSeconds,omitempty"`
+}
+
+// Defaults for the optional serving timings.
+const (
+	DefaultStartupTimeoutSeconds      = 1800
+	DefaultShutdownGracePeriodSeconds = 120
+)
+
+// StartupTimeout returns the load budget in seconds.
+func (m *Model) StartupTimeout() int {
+	if m.StartupTimeoutSeconds > 0 {
+		return m.StartupTimeoutSeconds
+	}
+	return DefaultStartupTimeoutSeconds
+}
+
+// GracePeriod returns the drain budget in seconds.
+func (m *Model) GracePeriod() int {
+	if m.ShutdownGracePeriodSeconds > 0 {
+		return m.ShutdownGracePeriodSeconds
+	}
+	return DefaultShutdownGracePeriodSeconds
 }
 
 // Source is where the weights come from.

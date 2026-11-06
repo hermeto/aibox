@@ -110,8 +110,9 @@ doctor: build ## Check prerequisites: aibox doctor --profile $(PROFILE)
 ##@ Quality
 
 .PHONY: generate
-generate: ## Regenerate committed files derived from profiles (Karpenter node pools)
+generate: ## Regenerate committed files derived from profiles and the catalog (node pools, model servers)
 	for p in aws-dev aws-bench; do go run ./cmd/aibox render nodepools --profile $$p > platform/gpu/overlays/$$p/nodepools.yaml; done
+	for p in local aws-dev aws-bench; do go run ./cmd/aibox render serving --profile $$p > platform/serving/overlays/$$p/models.yaml; done
 
 .PHONY: check-image-digests
 check-image-digests: $(KUSTOMIZE) $(HELM) ## Fail on platform images not pinned by digest (needs Docker and network)
