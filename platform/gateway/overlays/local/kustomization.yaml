@@ -13,6 +13,10 @@ patches:
         path: /spec/provider/kubernetes/envoyService
         value:
           type: NodePort
+          # kind maps 30080 on the control-plane node, which runs no Envoy pod. The default
+          # policy (Local) drops NodePort traffic on nodes without a local endpoint, so requests
+          # hang; Cluster forwards them to the Envoy pod on any node.
+          externalTrafficPolicy: Cluster
           patch:
             type: StrategicMerge
             value:
