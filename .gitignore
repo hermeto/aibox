@@ -69,5 +69,4 @@ hack/crds/
 .aibox/
 
 # Kustomize helm chart cache (make tools pulls charts at render time)
-/platform/*/charts/
-/platform/*/overlays/*/charts/
+/platform/**/charts/

@@ -9,6 +9,8 @@ ignore: |
   internal/profile/testdata/invalid/not-yaml.yaml
   # Helm templates are Go templates, validated by `make validate-manifests` instead.
   platform/**/templates/
+  # Helm chart cache pulled by kustomize at render time (not committed).
+  platform/**/charts/
 rules:
   braces:
     max-spaces-inside: 1
