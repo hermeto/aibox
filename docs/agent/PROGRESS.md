@@ -7,8 +7,8 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 010-observability-stack (implementation complete; PR #12 draft) |
-| Spec Kit phase | implement done; CI fixes pushed, waiting for e2e-local on #11 and #12 |
+| Current feature | 010-observability-stack done (PR #12 ready); next: 011-inference-routing |
+| Spec Kit phase | 010 step 12 done; 011 not started (branch from `010-observability-stack`) |
 | Last commit | see `git log -1` on `010-observability-stack` |
 | Run status | in progress |
 
@@ -21,20 +21,14 @@
 5. [#7](https://github.com/hermeto/aibox/pull/7) `005-cost-guardrails` → `004-aws-infrastructure`
 6. [#8](https://github.com/hermeto/aibox/pull/8) `006-gpu-node-provisioning` → `005-cost-guardrails`
 7. [#9](https://github.com/hermeto/aibox/pull/9) `007-model-catalog` → `006-gpu-node-provisioning`
-8. [#10](https://github.com/hermeto/aibox/pull/10) `008-inference-runtime` → `007-model-catalog` (draft; CI green)
-9. [#11](https://github.com/hermeto/aibox/pull/11) `009-gateway-api` → `008-inference-runtime` (draft; gateway fixes pushed, CI re-running)
-10. [#12](https://github.com/hermeto/aibox/pull/12) `010-observability-stack` → `009-gateway-api` (draft; Loki and lint fixes pushed, CI re-running)
+8. [#10](https://github.com/hermeto/aibox/pull/10) `008-inference-runtime` → `007-model-catalog` (ready; CI green)
+9. [#11](https://github.com/hermeto/aibox/pull/11) `009-gateway-api` → `008-inference-runtime` (ready; CI green)
+10. [#12](https://github.com/hermeto/aibox/pull/12) `010-observability-stack` → `009-gateway-api` (ready; CI green)
 
 ## Blockers / `needs-human`
 
 - [#2](https://github.com/hermeto/aibox/issues/2) one-time repository setup: default branch is
   now `main`; topics, ruleset, labels and milestones still need `hack/github/setup-repo.sh`.
-- #11 and #12 e2e-local: fixed so far — rate-limit BackendTrafficPolicy namespace (policy
-  never attached), Loki crash-loop on a read-only `/var/loki`, and the local Envoy Service
-  `externalTrafficPolicy: Local` (kind maps 30080 on the control-plane, which has no Envoy pod,
-  so gateway requests hung), and the catch-all 404 route that captured `/v1/models` (the 404
-  body now ships as the AI Gateway's own not-found filter). Confirm the CI re-runs before
-  marking ready.
 
 Tracking issue: [#3 v1.0 roadmap](https://github.com/hermeto/aibox/issues/3).
 
