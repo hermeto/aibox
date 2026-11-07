@@ -18,3 +18,16 @@
   (`examples/token_ratelimit/envoy-gateway-values-addon.yaml`).
 - KServe v0.21.0's installer uses Envoy Gateway v1.8.1 and Envoy AI Gateway v1.1.0 with
   Gateway API v1.5.1 — the same pairing one minor older.
+
+## R-late: findings from e2e-local (2026-11-07)
+
+- **Policy attachment.** `targetRefs` of Envoy Gateway policies resolve only in the policy's own
+  namespace; the serving overlays' `namespace:` override moved the rate-limit policy away from
+  the Gateway, so it never attached. Guarded by `test/gateway`.
+- **Envoy Service traffic policy.** `EnvoyProxy.spec.provider.kubernetes.envoyService.externalTrafficPolicy`
+  defaults to `Local` (CRD in gateway-crds-helm v1.9.3). On kind the host port lands on the
+  control-plane node, so the local overlay sets `Cluster`.
+- **Not-found response.** Envoy AI Gateway v1.2.0 appends a reserved `route-not-found` rule
+  (`PathPrefix /`) to every generated HTTPRoute and creates its `ai-eg-route-not-found-response-<route>`
+  filter only when missing ([`internal/controller/ai_gateway_route.go`](https://github.com/envoyproxy/ai-gateway/blob/v1.2.0/internal/controller/ai_gateway_route.go)).
+  Shipping that filter sets the 404 body; re-check this behavior when bumping the AI Gateway.

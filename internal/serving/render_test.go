@@ -2,6 +2,7 @@ package serving
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -243,5 +244,25 @@ func TestGatewayObjects(t *testing.T) {
 	// Without profile limits, only the default rules exist.
 	if rules := rateLimits(loadProfile(t, "aws-dev"))["spec"].(map[string]any)["rateLimit"].(map[string]any)["global"].(map[string]any)["rules"].([]any); len(rules) != 2 {
 		t.Fatalf("default limits: %d rules", len(rules))
+	}
+}
+
+func TestModelNotFoundFilterTakesTheControllerName(t *testing.T) {
+	f := modelNotFound()
+	meta := f["metadata"].(map[string]any)
+	// The AI Gateway controller looks the filter up by this name and keeps an existing one.
+	if meta["name"] != "ai-eg-route-not-found-response-"+RouteName || meta["namespace"] != Namespace {
+		t.Fatalf("filter metadata %v", meta)
+	}
+	dr := f["spec"].(map[string]any)["directResponse"].(map[string]any)
+	if dr["statusCode"] != 404 || dr["contentType"] != "application/json" {
+		t.Fatalf("direct response %v", dr)
+	}
+	var body struct {
+		Error struct{ Code, Type string } `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(dr["body"].(map[string]any)["inline"].(string)), &body); err != nil ||
+		body.Error.Code != "model_not_found" || body.Error.Type != "invalid_request_error" {
+		t.Fatalf("body %v %v", body, err)
 	}
 }

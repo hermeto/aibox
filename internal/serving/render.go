@@ -85,7 +85,7 @@ func Render(p *profile.Profile, c *models.Catalog) ([]byte, error) {
 		objs = append(objs, routing(m)...)
 	}
 	if len(served) > 0 {
-		objs = append(objs, route(served), rateLimits(p))
+		objs = append(objs, route(served), modelNotFound(), rateLimits(p))
 	}
 	if fetch {
 		cm, err := fetchScripts()

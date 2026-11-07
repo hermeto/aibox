@@ -89,6 +89,30 @@ func route(ms []*models.Model) map[string]any {
 	}
 }
 
+// ModelNotFoundBody is the OpenAI-style error the gateway returns for a model without a route.
+const ModelNotFoundBody = `{"error":{"message":"The model does not exist or is not served by this AIBox environment.","type":"invalid_request_error","param":"model","code":"model_not_found"}}`
+
+// modelNotFound returns the direct-response filter of the AIGatewayRoute's reserved
+// route-not-found rule. The AI Gateway controller creates this filter with a plain-text body
+// only when it does not exist yet and never updates it (internal/controller/ai_gateway_route.go
+// in v1.2.0), so shipping it under the controller's name gives unknown models an OpenAI-style
+// 404. A separate catch-all HTTPRoute cannot do this: it ties with the route-not-found rule and,
+// when it wins, also captures /v1/models, which only the AI route's extproc answers.
+func modelNotFound() map[string]any {
+	return map[string]any{
+		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
+		"kind":       "HTTPRouteFilter",
+		"metadata":   map[string]any{"name": "ai-eg-route-not-found-response-" + RouteName, "namespace": Namespace, "labels": map[string]any{"app.kubernetes.io/part-of": "aibox"}},
+		"spec": map[string]any{
+			"directResponse": map[string]any{
+				"contentType": "application/json",
+				"statusCode":  404,
+				"body":        map[string]any{"type": "Inline", "inline": ModelNotFoundBody},
+			},
+		},
+	}
+}
+
 // rateLimits returns the BackendTrafficPolicy with the profile's per-client requests and
 // tokens per minute (global limits, counted in Redis). Clients without an entry share the
 // default limit, each with its own counter.

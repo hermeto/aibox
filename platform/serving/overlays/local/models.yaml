@@ -179,6 +179,22 @@ spec:
       request: 600s
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  labels:
+    app.kubernetes.io/part-of: aibox
+  name: ai-eg-route-not-found-response-aibox
+  namespace: aibox-serving
+spec:
+  directResponse:
+    body:
+      inline: '{"error":{"message":"The model does not exist or is not served by this
+        AIBox environment.","type":"invalid_request_error","param":"model","code":"model_not_found"}}'
+      type: Inline
+    contentType: application/json
+    statusCode: 404
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
   labels:

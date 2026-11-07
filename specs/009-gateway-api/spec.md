@@ -21,6 +21,11 @@
 - Q: How do smoke and the metrics contract keep reaching the model server's `/metrics`? → A: Smoke sends its requests through the gateway with the CLI key; the model servers' metrics move to a NodePort 30082 (`inference-metrics`, local only; kind maps it to 127.0.0.1). (decided by agent: the gateway exposes only the OpenAI API)
 - Q: Body size limit? → A: 4 MiB request bodies (`ClientTrafficPolicy`); larger bodies get 413. (decided by agent: comfortably above a 128k-token prompt)
 
+### Session 2026-11-07
+
+- Q: How does an unknown model get the OpenAI-style 404 without hiding `/v1/models`? → A: The serving render ships the AI Gateway's reserved `ai-eg-route-not-found-response-aibox` HTTPRouteFilter with the JSON body; the controller keeps an existing filter, so the route's own catch-all rule answers unknown models and no separate catch-all HTTPRoute exists. (decided by agent: a second `PathPrefix /` route ties with the reserved rule and, when it wins, captures `/v1/models`, which e2e-local showed)
+- Q: How is the local Envoy Service exposed? → A: NodePort 30080 with `externalTrafficPolicy: Cluster`; cloud overlays keep `Local`. (decided by agent: kind maps the port on the control-plane, which runs no Envoy pod)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - One OpenAI-compatible endpoint (Priority: P1)

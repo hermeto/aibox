@@ -1,7 +1,7 @@
 # Inference gateway (ADR-0003): Envoy Gateway with the Envoy AI Gateway (model routing from the
 # request body, /v1/models, token usage for rate limits), Redis for global rate-limit counters,
-# the aibox GatewayClass/Gateway, API-key authentication, a body size limit and the OpenAI-style
-# 404 for unknown models. Model routes come with the model servers (platform/serving).
+# the aibox GatewayClass/Gateway, API-key authentication and a body size limit. Model routes and
+# the OpenAI-style 404 for unknown models come with the model servers (platform/serving).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 helmCharts:
