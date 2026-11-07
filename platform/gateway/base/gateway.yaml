@@ -1,6 +1,9 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
   name: aibox
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -14,6 +17,9 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
   name: aibox
   namespace: aibox-gateway
 spec:
@@ -26,6 +32,9 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
   name: aibox
   namespace: aibox-gateway
 spec:
@@ -44,6 +53,9 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
   name: api-keys
   namespace: aibox-gateway
 spec:
@@ -63,6 +75,9 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
   name: limits
   namespace: aibox-gateway
 spec:

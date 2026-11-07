@@ -6,6 +6,8 @@ package gateway
 import (
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hermeto/aibox/internal/serving"
@@ -122,4 +124,33 @@ func TestLocalEnvoyServiceForwardsAcrossNodes(t *testing.T) {
 		}
 	}
 	t.Fatal("no EnvoyProxy envoyService patch in the local gateway overlay")
+}
+
+// The gateway objects need the CRDs from the base's Helm charts. Argo CD applies a wave only
+// after the previous one is healthy (CRDs established), so they must sit after wave 0.
+func TestGatewayObjectsSyncAfterTheCRDs(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(root, "platform", "gateway", "base", "gateway.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	docs := strings.Split(string(data), "\n---\n")
+	for _, d := range docs {
+		var obj struct {
+			Kind     string `json:"kind"`
+			Metadata struct {
+				Name        string            `json:"name"`
+				Annotations map[string]string `json:"annotations"`
+			} `json:"metadata"`
+		}
+		if err := yaml.Unmarshal([]byte(d), &obj); err != nil {
+			t.Fatal(err)
+		}
+		if obj.Kind == "" {
+			continue
+		}
+		w, err := strconv.Atoi(obj.Metadata.Annotations["argocd.argoproj.io/sync-wave"])
+		if err != nil || w < 1 {
+			t.Errorf("%s %s: sync-wave %q, want >= 1", obj.Kind, obj.Metadata.Name, obj.Metadata.Annotations["argocd.argoproj.io/sync-wave"])
+		}
+	}
 }
