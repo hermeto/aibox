@@ -162,13 +162,19 @@ helmCharts:
         compactor:
           retention_enabled: true
           delete_request_store: filesystem
-        resources:
-          requests: {cpu: 50m, memory: 128Mi}
-          limits: {memory: 512Mi}
       singleBinary:
         replicas: 1
+        # Logs are kept for 24 h only, so no PVC. The chart mounts /var/loki only when
+        # persistence is enabled and the root filesystem is read-only, so an emptyDir must
+        # back it or Loki cannot create its data directories and crash-loops.
         persistence:
           enabled: false
+        extraVolumes:
+          - name: data
+            emptyDir: {}
+        extraVolumeMounts:
+          - name: data
+            mountPath: /var/loki
         resources:
           requests: {cpu: 50m, memory: 128Mi}
           limits: {memory: 512Mi}
