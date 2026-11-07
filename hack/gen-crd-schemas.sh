@@ -33,6 +33,8 @@ crds=(
   "prometheus-servicemonitors|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml"
   "prometheus-podmonitors|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml"
   "prometheus-prometheusrules|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml"
+  "prometheus-prometheuses|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml"
+  "prometheus-alertmanagers|https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.2/example/prometheus-operator-crd/monitoring.coreos.com_alertmanagers.yaml"
 )
 
 mkdir -p hack/crds
