@@ -16,3 +16,4 @@ ignores:
   - "docs/agent/PLAYBOOK.md"
   - "CHANGELOG.md"
   - "**/.terraform/**"
+  - "platform/**/charts/**"   # Helm chart cache pulled by kustomize at render time

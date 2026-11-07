@@ -1,0 +1,54 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "TTFT p99 by model (SLO from the catalog)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:time_to_first_token_seconds:p99", "legendFormat": "{{model}}"}]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Inter-token latency p99 by model",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aibox:inter_token_latency_seconds:p99", "legendFormat": "{{model}}"}]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "End-to-end request latency p50 / p95 / p99",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "aibox:e2e_request_latency_seconds:p50", "legendFormat": "{{model}} p50"},
+        {"refId": "B", "expr": "aibox:e2e_request_latency_seconds:p95", "legendFormat": "{{model}} p95"},
+        {"refId": "C", "expr": "aibox:e2e_request_latency_seconds:p99", "legendFormat": "{{model}} p99"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Request throughput (goodput proxy)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "reqps", "custom": {"drawStyle": "line", "fillOpacity": 10}}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "sum by (model) (aibox:requests_finished_total:rate1m)", "legendFormat": "{{model}} finished"},
+        {"refId": "B", "expr": "sum by (model) (aibox:prompt_tokens_total:rate1m)", "legendFormat": "{{model}} prompt tokens/s"}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["aibox", "slo"],
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "browser",
+  "title": "AIBox — SLO per model",
+  "uid": "aibox-slo",
+  "version": 1
+}

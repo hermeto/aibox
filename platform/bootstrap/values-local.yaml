@@ -14,6 +14,9 @@ apps:
     namespace: kserve
     syncWave: -1
     path: platform/kserve/base
+  - name: observability
+    namespace: observability
+    syncWave: -1
   - name: models
     namespace: aibox-models
     syncWave: 0

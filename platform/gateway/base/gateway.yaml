@@ -28,6 +28,17 @@ spec:
     kubernetes:
       envoyService:
         type: ClusterIP
+  # Request traces (feature 010): Envoy exports OTLP spans to the Collector, which forwards
+  # them to Tempo. Local samples everything; the aws overlays lower the fraction to 10%.
+  telemetry:
+    tracing:
+      overallSamplingFraction:
+        numerator: 100
+        denominator: 100
+      provider:
+        type: OpenTelemetry
+        host: otel-traces.observability.svc.cluster.local
+        port: 4317
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

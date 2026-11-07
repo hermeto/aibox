@@ -28,3 +28,11 @@ patches:
       - op: replace
         path: /spec/listeners/0/port
         value: 443
+  - target:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: aibox
+    patch: |-
+      - op: replace
+        path: /spec/telemetry/tracing/overallSamplingFraction/numerator
+        value: 10

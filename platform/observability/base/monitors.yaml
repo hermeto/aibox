@@ -1,0 +1,101 @@
+# Scrape targets. Prometheus selects monitors in every namespace (values in the base
+# kustomization), so the observability component does not need to own the workloads' namespaces.
+# Monitors whose workload is absent (DCGM on local, KEDA/Karpenter without cloud) are inert.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: model-servers
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: aibox
+spec:
+  namespaceSelector:
+    matchNames: [aibox-serving]
+  # KServe owns app.kubernetes.io/part-of on the generated pods (it reserves that label for
+  # its cache selector), so select AIBox model servers by the label AIBox always adds.
+  selector:
+    matchExpressions:
+      - key: aibox.dev/model
+        operator: Exists
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+---
+# Envoy data plane (gateway). The proxy exposes Prometheus stats on the `metrics` port.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: envoy-gateway
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: aibox
+spec:
+  namespaceSelector:
+    matchNames: [envoy-gateway-system]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: envoy
+      app.kubernetes.io/component: proxy
+  podMetricsEndpoints:
+    - port: metrics
+      path: /stats/prometheus
+      interval: 15s
+---
+# DCGM exporter (feature 006), when the GPU operator is installed on cloud profiles.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dcgm-exporter
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: aibox
+spec:
+  namespaceSelector:
+    matchNames: [gpu-operator]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcgm-exporter
+  endpoints:
+    - port: gpu-metrics
+      path: /metrics
+      interval: 15s
+---
+# KEDA operator and metrics server (feature 012).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: keda
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: aibox
+spec:
+  namespaceSelector:
+    matchNames: [keda]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keda-operator-metrics
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+# Karpenter controller (feature 006).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: karpenter
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: aibox
+spec:
+  namespaceSelector:
+    matchNames: [karpenter]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: karpenter
+  podMetricsEndpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 30s

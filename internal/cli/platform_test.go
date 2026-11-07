@@ -33,7 +33,7 @@ func (fakeKube) Apply(context.Context, schema.GroupVersionResource, *unstructure
 }
 func (fakeKube) ListApplications(context.Context, string) ([]kube.AppStatus, error) {
 	var apps []kube.AppStatus
-	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve", "gateway"} {
+	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve", "gateway", "observability"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps, nil

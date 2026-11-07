@@ -1,0 +1,6 @@
+# aws-dev: ClusterIP only; port-forward Grafana/Prometheus/Tempo to reach them.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - generated-rules.yaml

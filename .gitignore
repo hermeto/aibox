@@ -67,3 +67,6 @@ hack/crds/
 
 # --- AIBox generated per-run state (account-specific; never commit) ---
 .aibox/
+
+# Kustomize helm chart cache (make tools pulls charts at render time)
+/platform/**/charts/

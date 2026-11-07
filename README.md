@@ -69,6 +69,21 @@ are mapped per runtime in [metrics/runtime-metrics.yaml](metrics/runtime-metrics
 that do not become ready are covered in
 [docs/runbooks/model-load-failures.md](docs/runbooks/model-load-failures.md).
 
+## Observability
+
+The `observability` component ships Prometheus (24 h retention), Alertmanager, Grafana,
+Tempo and Loki, with two OpenTelemetry Collector workloads for traces and logs
+([ADR-0011](docs/adr/0011-prometheus-metrics-backend.md)). Five dashboards and all alerting
+rules are generated from the catalog and the price table (`aibox render rules`) and
+provisioned from git. On `local`:
+
+- Grafana: <http://127.0.0.1:30300> (admin password in the `monitoring-grafana` Secret)
+- Prometheus: <http://127.0.0.1:30301>
+- Tempo: <http://127.0.0.1:30302>
+
+See [docs/runbooks/observability.md](docs/runbooks/observability.md) for endpoints, the
+signals collected and troubleshooting.
+
 ## The `aibox` CLI
 
 ```bash

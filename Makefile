@@ -18,6 +18,7 @@ KUBECONFORM_VERSION       ?= v0.8.0
 KUSTOMIZE_VERSION         ?= v5.8.3
 HELM_VERSION              ?= v4.3.1
 K8S_SCHEMA_VERSION        ?= 1.37.0
+PROMTOOL_VERSION          ?= v0.316.0
 
 BIN := $(CURDIR)/bin
 export PATH := $(BIN):$(PATH)
@@ -37,6 +38,7 @@ HELM          := $(BIN)/helm
 SHELLCHECK    := $(BIN)/shellcheck
 YAMLLINT      := uvx yamllint==$(YAMLLINT_VERSION)
 MARKDOWNLINT  := npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION)
+PROMTOOL      := $(BIN)/promtool
 
 SHELL_SCRIPTS = $(shell find . -type f -name '*.sh' -not -path './.specify/*' -not -path './bin/*' -not -path './node_modules/*' -not -path '*/.terraform/*' | sort)
 
@@ -58,7 +60,7 @@ dev-setup: ## Check prerequisites, install pinned tools and pre-commit hooks
 		else uvx pre-commit==$(PRE_COMMIT_VERSION) install --install-hooks; fi
 
 .PHONY: tools
-tools: $(GOLANGCI_LINT) $(ACTIONLINT) $(EC) $(SHELLCHECK) $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Install pinned linters and renderers into ./bin
+tools: $(GOLANGCI_LINT) $(ACTIONLINT) $(EC) $(SHELLCHECK) $(KUBECONFORM) $(KUSTOMIZE) $(HELM) $(PROMTOOL) ## Install pinned linters and renderers into ./bin
 
 $(GOLANGCI_LINT):
 	GOBIN=$(BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
@@ -76,6 +78,8 @@ $(SHELLCHECK):
 	uv venv --quiet --allow-existing $(BIN)/.shellcheck
 	uv pip install --quiet --python $(BIN)/.shellcheck shellcheck-py==$(SHELLCHECK_PY_VERSION)
 	ln -sf .shellcheck/bin/shellcheck $(SHELLCHECK)
+$(PROMTOOL):
+	GOBIN=$(BIN) go install github.com/prometheus/prometheus/cmd/promtool@$(PROMTOOL_VERSION)
 
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format Go code
@@ -113,6 +117,10 @@ doctor: build ## Check prerequisites: aibox doctor --profile $(PROFILE)
 generate: ## Regenerate committed files derived from profiles and the catalog (node pools, model servers)
 	for p in aws-dev aws-bench; do go run ./cmd/aibox render nodepools --profile $$p > platform/gpu/overlays/$$p/nodepools.yaml; done
 	for p in local aws-dev aws-bench; do go run ./cmd/aibox render serving --profile $$p > platform/serving/overlays/$$p/models.yaml; done
+	for p in local aws-dev aws-bench; do \
+		go run ./cmd/aibox render rules --profile $$p > platform/observability/overlays/$$p/generated-rules.yaml; \
+		go run ./cmd/aibox render rules --profile $$p --format prometheus > platform/observability/rules/$$p.rules.yaml; \
+	done
 
 .PHONY: check-image-digests
 check-image-digests: $(KUSTOMIZE) $(HELM) ## Fail on platform images not pinned by digest (needs Docker and network)
@@ -127,7 +135,15 @@ validate-manifests: $(KUBECONFORM) $(KUSTOMIZE) $(HELM) ## Render platform/ (boo
 	HELM=$(HELM) KUSTOMIZE=$(KUSTOMIZE) hack/validate-manifests.sh "$(KUBECONFORM)" "$(K8S_SCHEMA_VERSION)"
 
 .PHONY: lint
-lint: lint-go lint-actions lint-pins lint-shell lint-yaml lint-markdown lint-editorconfig validate-manifests ## Run every linter
+lint: lint-go lint-actions lint-pins lint-shell lint-yaml lint-markdown lint-editorconfig test-rules lint-dashboards validate-manifests ## Run every linter
+
+.PHONY: test-rules
+test-rules: $(PROMTOOL) ## Unit-test the generated Prometheus rules (promtool)
+	$(PROMTOOL) test rules platform/observability/rules/tests/*.yaml
+
+.PHONY: lint-dashboards
+lint-dashboards: ## Lint the Grafana dashboards (JSON model and required fields)
+	go test ./internal/observability -run TestDashboards -count=1
 
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT) ## Lint Go code
