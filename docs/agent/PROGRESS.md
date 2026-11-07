@@ -7,8 +7,8 @@
 
 | Field | Value |
 | --- | --- |
-| Current feature | 010-observability-stack (implementation complete; PR pending) |
-| Spec Kit phase | implement done; e2e verification in CI |
+| Current feature | 010-observability-stack (implementation complete; PR #12 draft) |
+| Spec Kit phase | implement done; CI fixes pushed, waiting for e2e-local on #11 and #12 |
 | Last commit | see `git log -1` on `010-observability-stack` |
 | Run status | in progress |
 
@@ -21,15 +21,18 @@
 5. [#7](https://github.com/hermeto/aibox/pull/7) `005-cost-guardrails` → `004-aws-infrastructure`
 6. [#8](https://github.com/hermeto/aibox/pull/8) `006-gpu-node-provisioning` → `005-cost-guardrails`
 7. [#9](https://github.com/hermeto/aibox/pull/9) `007-model-catalog` → `006-gpu-node-provisioning`
-8. [#10](https://github.com/hermeto/aibox/pull/10) `008-inference-runtime` → `007-model-catalog` (draft; e2e-local failing on KServe reconcile)
-9. [#11](https://github.com/hermeto/aibox/pull/11) `009-gateway-api` → `008-inference-runtime` (draft; e2e-local failing on missing envoy namespaces)
-10. `010-observability-stack` → `009-gateway-api` (PR to open after push)
+8. [#10](https://github.com/hermeto/aibox/pull/10) `008-inference-runtime` → `007-model-catalog` (draft; CI green)
+9. [#11](https://github.com/hermeto/aibox/pull/11) `009-gateway-api` → `008-inference-runtime` (draft; rate-limit policy namespace fixed, CI re-running)
+10. [#12](https://github.com/hermeto/aibox/pull/12) `010-observability-stack` → `009-gateway-api` (draft; Loki and lint fixes pushed, CI re-running)
 
 ## Blockers / `needs-human`
 
 - [#2](https://github.com/hermeto/aibox/issues/2) one-time repository setup: default branch is
   now `main`; topics, ruleset, labels and milestones still need `hack/github/setup-repo.sh`.
-- #10 and #11 e2e failures (details in the PR review notes; fix before marking ready).
+- #11 and #12 e2e-local: last runs failed because the serving overlays overrode the
+  rate-limit BackendTrafficPolicy namespace (policy never attached, Argo CD kept `serving`
+  Progressing) and Loki crash-looped on a read-only `/var/loki`. Both fixed; confirm the
+  re-runs before marking ready.
 
 Tracking issue: [#3 v1.0 roadmap](https://github.com/hermeto/aibox/issues/3).
 
@@ -64,3 +67,8 @@ The run executes on the maintainer's Mac. Docker must be running for `e2e-local`
 5. **Local Docker was not available in the implementation session**, so the e2e assertions
    are verified by CI rather than locally; unit tests, rule tests and manifest rendering were
    run locally.
+6. **Loki storage.** Loki keeps 24 h of logs on an `emptyDir` at `/var/loki` instead of a PVC;
+   logs are lost on pod restart, which is acceptable for the retention target.
+7. **Serving overlay namespaces.** The serving overlays no longer set an overlay-wide
+   `namespace:`; generated objects carry explicit namespaces and `test/gateway` guards that
+   Gateway-targeting policies stay in `aibox-gateway`.
