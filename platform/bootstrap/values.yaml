@@ -8,6 +8,11 @@ runId: ""
 # Set by `aibox up` once the profile's model weights are mirrored; components marked
 # `requiresModels` (cloud model servers) deploy only then.
 modelsReady: false
+# Set by `aibox up` for cloud profiles: ACM certificate for the gateway's load balancer and the
+# CIDRs allowed to reach it.
+gateway:
+  tlsCertificateArn: ""
+  sourceRanges: []
 # Argo CD namespace and project for child Applications.
 argocdNamespace: argocd
 project: default

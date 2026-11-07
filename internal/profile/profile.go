@@ -44,6 +44,35 @@ type Spec struct {
 	Local      *Local     `json:"local,omitempty"`
 	AWS        *AWS       `json:"aws,omitempty"`
 	Guardrails Guardrails `json:"guardrails"`
+	Gateway    *Gateway   `json:"gateway,omitempty"`
+}
+
+// Gateway holds inference gateway settings.
+type Gateway struct {
+	RateLimits *RateLimits `json:"rateLimits,omitempty"`
+}
+
+// RateLimits are per-client API limits; clients without an entry get Default.
+type RateLimits struct {
+	Default RateLimit            `json:"default"`
+	Clients map[string]RateLimit `json:"clients,omitempty"`
+}
+
+// RateLimit is one client's budget per minute.
+type RateLimit struct {
+	RequestsPerMinute int `json:"requestsPerMinute"`
+	TokensPerMinute   int `json:"tokensPerMinute"`
+}
+
+// DefaultRateLimit applies when a profile sets no gateway limits.
+var DefaultRateLimit = RateLimit{RequestsPerMinute: 600, TokensPerMinute: 1000000}
+
+// Limits returns the profile's rate limits (defaults when unset).
+func (s Spec) Limits() RateLimits {
+	if s.Gateway == nil || s.Gateway.RateLimits == nil {
+		return RateLimits{Default: DefaultRateLimit}
+	}
+	return *s.Gateway.RateLimits
 }
 
 // Cluster holds Kubernetes cluster settings.

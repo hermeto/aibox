@@ -54,6 +54,7 @@
           }
         },
         "loadMethod": { "enum": ["s3-stream", "nvme-cache", "hf-download", "none"] },
+        "routing": { "enum": ["round-robin"], "description": "How the gateway spreads requests across the model's servers (default round-robin; feature 011 adds epp)." },
         "startupTimeoutSeconds": { "type": "integer", "minimum": 60, "maximum": 7200, "description": "Budget for loading weights and the warm-up request (default 1800)." },
         "shutdownGracePeriodSeconds": { "type": "integer", "minimum": 30, "maximum": 3600, "description": "Time to drain in-flight requests on shutdown (default 120)." },
         "slo": {

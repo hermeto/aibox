@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,7 +32,10 @@ func (d downResult) RenderText(w io.Writer) error {
 }
 
 func newSmokeCmd(app *App) *cobra.Command {
-	var o smoke.Options
+	var (
+		o      smoke.Options
+		apiKey string
+	)
 	cmd := &cobra.Command{
 		Use:   "smoke",
 		Short: "Send one request per model and check metrics, traces and dashboards",
@@ -51,8 +56,20 @@ and checks that the runtime metrics AIBox depends on are exposed. Exit code 1 on
 				o.BaseURL = platform.LocalEndpoints[0].URL
 			}
 			if o.MetricsURL == "" {
-				o.MetricsURL = strings.TrimSuffix(o.BaseURL, "/v1") + "/metrics"
+				o.MetricsURL = platform.LocalMetricsURL
 			}
+			if apiKey == "" {
+				l, err := app.localPlatform(p)
+				if err != nil {
+					return err
+				}
+				key, err := os.ReadFile(platform.APIKeyFile(l.StateDirectory())) //nolint:gosec // CLI state file
+				if err != nil {
+					return fmt.Errorf("gateway API key: %w (run aibox up first, or pass --api-key)", err)
+				}
+				apiKey = strings.TrimSpace(string(key))
+			}
+			o.Header = http.Header{"Authorization": []string{"Bearer " + apiKey}}
 			if len(o.ExpectModels) == 0 {
 				if o.ExpectModels, err = servedModels(p.Metadata.Name); err != nil {
 					return err
@@ -70,7 +87,8 @@ and checks that the runtime metrics AIBox depends on are exposed. Exit code 1 on
 	}
 	f := cmd.Flags()
 	f.StringVar(&o.BaseURL, "endpoint", "", "OpenAI-compatible base URL (default: the profile's inference endpoint)")
-	f.StringVar(&o.MetricsURL, "metrics-url", "", "Prometheus metrics URL to check (default: <endpoint without /v1>/metrics)")
+	f.StringVar(&o.MetricsURL, "metrics-url", "", "Prometheus metrics URL of a model server (default: the local metrics endpoint)")
+	f.StringVar(&apiKey, "api-key", "", "gateway API key (default: the key aibox up created, .aibox/<profile>/api-key)")
 	f.StringSliceVar(&o.Models, "model", nil, "model(s) to test (default: every listed model)")
 	f.StringSliceVar(&o.ExpectModels, "expect-model", nil, "model(s) that must be listed (default: the profile's models)")
 	return cmd

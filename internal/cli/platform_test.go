@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,7 +33,7 @@ func (fakeKube) Apply(context.Context, schema.GroupVersionResource, *unstructure
 }
 func (fakeKube) ListApplications(context.Context, string) ([]kube.AppStatus, error) {
 	var apps []kube.AppStatus
-	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve"} {
+	for _, n := range []string{platform.RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve", "gateway"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps, nil
@@ -288,7 +289,11 @@ func TestSmokeAgainstFakeServer(t *testing.T) {
 	mux.HandleFunc("/v1/models", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{"data":[{"id":"sim-llama-8b"}]}`)
 	})
-	mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		_, _ = io.WriteString(w, `{"choices":[{"index":0}],"usage":{"completion_tokens":2}}`)
 	})
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) {
@@ -296,12 +301,34 @@ func TestSmokeAgainstFakeServer(t *testing.T) {
 	})
 	s := httptest.NewServer(mux)
 	defer s.Close()
-	r := runCLI(t, &App{}, "smoke", "--endpoint", s.URL+"/v1", "-o", "json")
+	args := []string{"smoke", "--endpoint", s.URL + "/v1", "--metrics-url", s.URL + "/metrics"}
+	r := runCLI(t, &App{}, append(args, "--api-key", "test-key", "-o", "json")...)
 	if r.code != 0 {
 		t.Fatalf("%d %s %s", r.code, r.stdout, r.stderr)
 	}
-	r = runCLI(t, &App{}, "smoke", "--endpoint", s.URL+"/v1", "--expect-model", "missing")
+	r = runCLI(t, &App{}, append(args, "--api-key", "test-key", "--expect-model", "missing")...)
 	if r.code != ExitFailure || !strings.Contains(r.stdout, "FAILED") {
 		t.Fatalf("%d %s", r.code, r.stdout)
+	}
+	// Without --api-key, the key aibox up saved is used.
+	state := t.TempDir()
+	app := &App{Getenv: func(k string) string {
+		if k == "AIBOX_STATE_DIR" {
+			return state
+		}
+		return ""
+	}}
+	r = runCLI(t, app, args...)
+	if r.code != ExitFailure || !strings.Contains(r.stderr, "run aibox up first") {
+		t.Fatalf("missing key: %d %s", r.code, r.stderr)
+	}
+	if err := os.MkdirAll(filepath.Join(state, "local"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(platform.APIKeyFile(filepath.Join(state, "local")), []byte("test-key\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if r = runCLI(t, app, args...); r.code != 0 {
+		t.Fatalf("saved key: %d %s %s", r.code, r.stdout, r.stderr)
 	}
 }

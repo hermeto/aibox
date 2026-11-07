@@ -1,8 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: aibox-serving
+# No overlay-wide namespace: models.yaml is generated with explicit namespaces, and the
+# rate-limit BackendTrafficPolicy must stay in the Gateway's namespace (aibox-gateway)
+# because policy targetRefs only resolve within the policy's own namespace.
 resources:
   - ../../base
   - models.yaml
   - hf-token.yaml
-  - inference-nodeport.yaml
+  - inference-metrics.yaml

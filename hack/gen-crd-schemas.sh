@@ -19,6 +19,17 @@ crds=(
   "cert-manager-issuers|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_issuers.yaml"
   "cert-manager-clusterissuers|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_clusterissuers.yaml"
   "cert-manager-certificates|https://raw.githubusercontent.com/cert-manager/cert-manager/v1.21.3/deploy/crds/cert-manager.io_certificates.yaml"
+  "gateway-api-gatewayclasses|https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml"
+  "gateway-api-gateways|https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_gateways.yaml"
+  "gateway-api-httproutes|https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml"
+  "eg-backends|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_backends.yaml"
+  "eg-backendtrafficpolicies|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_backendtrafficpolicies.yaml"
+  "eg-clienttrafficpolicies|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_clienttrafficpolicies.yaml"
+  "eg-envoyproxies|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_envoyproxies.yaml"
+  "eg-httproutefilters|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_httproutefilters.yaml"
+  "eg-securitypolicies|https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.3/charts/gateway-crds-helm/templates/generated/gateway.envoyproxy.io_securitypolicies.yaml"
+  "aigw-aigatewayroutes|https://raw.githubusercontent.com/envoyproxy/ai-gateway/v1.2.0/manifests/charts/ai-gateway-crds-helm/templates/aigateway.envoyproxy.io_aigatewayroutes.yaml"
+  "aigw-aiservicebackends|https://raw.githubusercontent.com/envoyproxy/ai-gateway/v1.2.0/manifests/charts/ai-gateway-crds-helm/templates/aigateway.envoyproxy.io_aiservicebackends.yaml"
 )
 
 mkdir -p hack/crds

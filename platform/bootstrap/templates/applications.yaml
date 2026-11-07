@@ -29,6 +29,27 @@ spec:
             - op: add
               path: /spec/tags/run-id
               value: {{ $.Values.runId | quote }}
+    {{- else if and (eq .name "gateway") (or $.Values.gateway.tlsCertificateArn $.Values.gateway.sourceRanges) }}
+    kustomize:
+      patches:
+        - target:
+            group: gateway.envoyproxy.io
+            kind: EnvoyProxy
+            name: aibox
+          patch: |-
+            {{- if $.Values.gateway.tlsCertificateArn }}
+            - op: add
+              path: /spec/provider/kubernetes/envoyService/annotations/service.beta.kubernetes.io~1aws-load-balancer-ssl-cert
+              value: {{ $.Values.gateway.tlsCertificateArn | quote }}
+            - op: add
+              path: /spec/provider/kubernetes/envoyService/annotations/service.beta.kubernetes.io~1aws-load-balancer-ssl-ports
+              value: "443"
+            {{- end }}
+            {{- if $.Values.gateway.sourceRanges }}
+            - op: add
+              path: /spec/provider/kubernetes/envoyService/loadBalancerSourceRanges
+              value: {{ toJson $.Values.gateway.sourceRanges }}
+            {{- end }}
     {{- end }}
   destination:
     server: https://kubernetes.default.svc

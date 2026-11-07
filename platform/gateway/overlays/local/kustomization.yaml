@@ -1,0 +1,26 @@
+# kind maps NodePort 30080 to 127.0.0.1:30080 (plain HTTP on localhost).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: aibox
+    patch: |-
+      - op: replace
+        path: /spec/provider/kubernetes/envoyService
+        value:
+          type: NodePort
+          # kind maps 30080 on the control-plane node, which runs no Envoy pod. The default
+          # policy (Local) drops NodePort traffic on nodes without a local endpoint, so requests
+          # hang; Cluster forwards them to the Envoy pod on any node.
+          externalTrafficPolicy: Cluster
+          patch:
+            type: StrategicMerge
+            value:
+              spec:
+                ports:
+                  - port: 80
+                    nodePort: 30080

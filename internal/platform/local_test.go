@@ -3,6 +3,7 @@ package platform
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
@@ -71,7 +72,7 @@ func gitFake() *exec.Fake {
 
 func readyApps() []kube.AppStatus {
 	var apps []kube.AppStatus
-	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve"} {
+	for _, n := range []string{RootAppName, "serving", "karpenter", "gpu", "secrets", "models", "cert-manager", "kserve", "gateway"} {
 		apps = append(apps, kube.AppStatus{Name: n, Sync: "Synced", Health: "Healthy"})
 	}
 	return apps
@@ -82,7 +83,7 @@ func newLocal(t *testing.T, r exec.Runner, k *fakeKube) (*Local, *bytes.Buffer) 
 	var log bytes.Buffer
 	return &Local{
 		Profile: localProfile(t), Runner: r, Root: repoRoot(t), Log: &log, PollInterval: time.Millisecond,
-		Kube: func(string) (KubeAPI, error) { return k, nil },
+		Kube: func(string) (KubeAPI, error) { return k, nil }, StateDir: t.TempDir(),
 	}, &log
 }
 
@@ -100,14 +101,22 @@ func TestUpCreatesClusterAndAppliesRoot(t *testing.T) {
 	if !strings.Contains(log.String(), "2 local commit(s) are not pushed") {
 		t.Fatalf("missing unpushed warning:\n%s", log)
 	}
-	// Namespace and run ConfigMap for the model servers, then the root Application.
-	if len(k.applied) != 3 || k.applied[0].GetKind() != "Namespace" || k.applied[1].GetName() != "aibox-run" || k.applied[2].GetName() != RootAppName {
+	// Serving namespace and run ConfigMap, gateway namespace and API key Secret, then the root.
+	if len(k.applied) != 5 || k.applied[0].GetKind() != "Namespace" || k.applied[1].GetName() != "aibox-run" ||
+		k.applied[3].GetName() != APIKeySecret || k.applied[4].GetName() != RootAppName {
 		t.Fatalf("applied %v", k.applied)
 	}
 	if bucket, _, _ := unstructured.NestedString(k.applied[1].Object, "data", "weightsBucket"); bucket != "aibox-weights" {
 		t.Fatalf("run config %v", k.applied[1].Object)
 	}
-	params, _, _ := unstructured.NestedSlice(k.applied[2].Object, "spec", "source", "helm", "parameters")
+	encoded, _, _ := unstructured.NestedString(k.applied[3].Object, "data", CLIClientID)
+	raw, _ := base64.StdEncoding.DecodeString(encoded)
+	key := string(raw)
+	saved, err := os.ReadFile(APIKeyFile(l.StateDirectory()))
+	if !strings.HasPrefix(key, "aibox-") || err != nil || strings.TrimSpace(string(saved)) != key {
+		t.Fatalf("CLI API key %q not saved (%v)", key, err)
+	}
+	params, _, _ := unstructured.NestedSlice(k.applied[4].Object, "spec", "source", "helm", "parameters")
 	if len(params) != 2 {
 		t.Fatalf("helm parameters %v", params)
 	}
@@ -237,7 +246,7 @@ func TestDown(t *testing.T) {
 func TestComponentsAndVersionCheck(t *testing.T) {
 	l, _ := newLocal(t, exec.NewFake(), nil)
 	comps, err := l.Components()
-	if err != nil || len(comps) != 5 || comps[0].Name != "cert-manager" || comps[0].Path != "platform/cert-manager/base" || comps[4].Path != "platform/serving/overlays/local" {
+	if err != nil || len(comps) != 6 || comps[0].Name != "cert-manager" || comps[0].Path != "platform/cert-manager/base" || comps[5].Path != "platform/serving/overlays/local" {
 		t.Fatalf("%v %v", comps, err)
 	}
 	cfg := filepath.Join(repoRoot(t), "infra", "local", "kind-config.yaml")
@@ -263,5 +272,20 @@ func TestNotAKindProfile(t *testing.T) {
 	l := &Local{Profile: p}
 	if _, err := l.Up(context.Background(), UpOptions{}); err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestLoadOrCreateAPIKeyIsStable(t *testing.T) {
+	dir := t.TempDir()
+	first, err := LoadOrCreateAPIKey(dir)
+	if err != nil || len(first) != len("aibox-")+64 {
+		t.Fatalf("%q %v", first, err)
+	}
+	again, err := LoadOrCreateAPIKey(dir)
+	if err != nil || again != first {
+		t.Fatalf("key changed: %q -> %q (%v)", first, again, err)
+	}
+	if fi, err := os.Stat(APIKeyFile(dir)); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("key file mode %v %v", fi, err)
 	}
 }

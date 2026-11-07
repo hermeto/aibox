@@ -1,0 +1,18 @@
+# Envoy Gateway and the Envoy AI Gateway are installed by this component in their own
+# namespaces. Argo CD only creates the Application destination namespace (aibox-gateway), so
+# both must be declared here: Helm charts do not create namespaces when rendered by Kustomize.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+  labels:
+    app.kubernetes.io/part-of: aibox
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-ai-gateway-system
+  labels:
+    app.kubernetes.io/part-of: aibox
+    pod-security.kubernetes.io/enforce: privileged

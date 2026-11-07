@@ -31,6 +31,7 @@ var (
 	Events       = schema.GroupVersionResource{Version: "v1", Resource: "events"}
 	Jobs         = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
 	ConfigMaps   = schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+	Secrets      = schema.GroupVersionResource{Version: "v1", Resource: "secrets"}
 )
 
 // Client is a thin wrapper over the dynamic client.

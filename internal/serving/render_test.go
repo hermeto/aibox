@@ -2,6 +2,7 @@ package serving
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -190,5 +191,85 @@ func TestCommittedManifestsMatchCatalog(t *testing.T) {
 		if !bytes.Equal(got, want) {
 			t.Errorf("platform/serving/overlays/%s/models.yaml is stale: run `make generate`", name)
 		}
+	}
+}
+
+func TestGatewayObjects(t *testing.T) {
+	local := loadProfile(t, "local")
+	out, err := Render(local, catalog(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	docs := strings.Split(string(out), "\n---\n")
+	byKind := map[string]map[string]any{}
+	for _, d := range docs {
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(d), &obj); err == nil && obj != nil {
+			byKind[obj["kind"].(string)] = obj
+		}
+	}
+	for _, kind := range []string{"Service", "Backend", "AIServiceBackend", "AIGatewayRoute", "BackendTrafficPolicy"} {
+		if byKind[kind] == nil {
+			t.Fatalf("missing %s in:\n%s", kind, out)
+		}
+	}
+	if spec := byKind["Service"]["spec"].(map[string]any); spec["clusterIP"] != "None" {
+		t.Fatalf("round-robin backend must be a headless Service: %v", spec)
+	}
+	rules := byKind["AIGatewayRoute"]["spec"].(map[string]any)["rules"].([]any)
+	match := rules[0].(map[string]any)["matches"].([]any)[0].(map[string]any)["headers"].([]any)[0].(map[string]any)
+	if match["name"] != ModelHeader || match["value"] != "sim-llama-8b" {
+		t.Fatalf("route rule %v", match)
+	}
+	// Per-client limits come first; the default rule excludes those clients.
+	rl := byKind["BackendTrafficPolicy"]["spec"].(map[string]any)["rateLimit"].(map[string]any)["global"].(map[string]any)["rules"].([]any)
+	if len(rl) != 6 {
+		t.Fatalf("2 clients + default, requests and tokens each: %d rules", len(rl))
+	}
+	first := rl[0].(map[string]any)
+	if v := first["clientSelectors"].([]any)[0].(map[string]any)["headers"].([]any)[0].(map[string]any)["value"]; v != "e2e-requests" {
+		t.Fatalf("first rule client %v", v)
+	}
+	if first["limit"].(map[string]any)["requests"] != float64(3) {
+		t.Fatalf("e2e-requests limit %v", first["limit"])
+	}
+	tokens := rl[3].(map[string]any)
+	if tokens["limit"].(map[string]any)["requests"] != float64(40) || tokens["cost"] == nil {
+		t.Fatalf("e2e-tokens token rule %v", tokens)
+	}
+	def := rl[4].(map[string]any)["clientSelectors"].([]any)[0].(map[string]any)["headers"].([]any)
+	if len(def) != 2 || def[0].(map[string]any)["type"] != "Distinct" || def[1].(map[string]any)["invert"] != true {
+		t.Fatalf("default rule selectors %v", def)
+	}
+	// Without profile limits, only the default rules exist.
+	if rules := rateLimits(loadProfile(t, "aws-dev"))["spec"].(map[string]any)["rateLimit"].(map[string]any)["global"].(map[string]any)["rules"].([]any); len(rules) != 2 {
+		t.Fatalf("default limits: %d rules", len(rules))
+	}
+}
+
+func TestModelNotFoundFilterTakesTheControllerName(t *testing.T) {
+	f := modelNotFound()
+	meta := f["metadata"].(map[string]any)
+	// The AI Gateway controller looks the filter up by this name and keeps an existing one.
+	if meta["name"] != "ai-eg-route-not-found-response-"+RouteName || meta["namespace"] != Namespace {
+		t.Fatalf("filter metadata %v", meta)
+	}
+	dr := f["spec"].(map[string]any)["directResponse"].(map[string]any)
+	if dr["statusCode"] != 404 || dr["contentType"] != "application/json" {
+		t.Fatalf("direct response %v", dr)
+	}
+	var body struct {
+		Error struct{ Code, Type string } `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(dr["body"].(map[string]any)["inline"].(string)), &body); err != nil ||
+		body.Error.Code != "model_not_found" || body.Error.Type != "invalid_request_error" {
+		t.Fatalf("body %v %v", body, err)
+	}
+}
+
+func TestRateLimitPolicyRefreshesModelBackendsQuickly(t *testing.T) {
+	dns, _ := rateLimits(loadProfile(t, "local"))["spec"].(map[string]any)["dns"].(map[string]any)
+	if dns["dnsRefreshRate"] != DNSRefreshRate || dns["respectDnsTtl"] != true {
+		t.Fatalf("dns settings %v", dns)
 	}
 }

@@ -1,0 +1,89 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
+  name: aibox
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: aibox
+    namespace: aibox-gateway
+---
+# Data-plane settings; overlays set how the Envoy Service is exposed.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
+  name: aibox
+  namespace: aibox-gateway
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
+  name: aibox
+  namespace: aibox-gateway
+spec:
+  gatewayClassName: aibox
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+# API keys: `Authorization: Bearer <key>` (Envoy strips "Bearer "), checked against the Secret
+# aibox-api-keys (client id -> key; created by `aibox up`, extended from the secret store). The
+# client id is forwarded for rate limits and logs; the key itself is removed.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
+  name: api-keys
+  namespace: aibox-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aibox
+  apiKeyAuth:
+    credentialRefs:
+      - name: aibox-api-keys
+    extractFrom:
+      - headers: [authorization]
+    forwardClientIDHeader: x-aibox-client
+    sanitize: true
+---
+# Requests the AI Gateway must buffer above 4 MiB are rejected with 413.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  annotations:
+    # After the charts' CRDs (wave 0) are established, or the apply fails and the sync stalls.
+    argocd.argoproj.io/sync-wave: "1"
+  name: limits
+  namespace: aibox-gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: aibox
+  connection:
+    bufferLimit: 4Mi

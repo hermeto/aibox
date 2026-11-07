@@ -1,0 +1,17 @@
+# Model server metrics on the host (kind maps NodePort 30082 to 127.0.0.1:30082) for the smoke
+# test and the runtime metric contract; inference traffic goes through the gateway (30080).
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-metrics
+  namespace: aibox-serving
+spec:
+  type: NodePort
+  selector:
+    aibox.dev/model: sim-llama-8b
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30082
+      protocol: TCP

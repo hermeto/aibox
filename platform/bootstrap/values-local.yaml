@@ -4,6 +4,9 @@ apps:
     namespace: cert-manager
     syncWave: -2
     path: platform/cert-manager/base
+  - name: gateway
+    namespace: aibox-gateway
+    syncWave: -2
   - name: secrets
     namespace: external-secrets
     syncWave: -1

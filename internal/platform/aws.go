@@ -62,6 +62,10 @@ type RunState struct {
 	// ModelsReady is set once `aibox up` mirrored the weights and deployed the model servers;
 	// later bring-ups keep them deployed.
 	ModelsReady bool `json:"modelsReady,omitempty"`
+	// AdminCIDRs may reach the EKS API and the gateway load balancer.
+	AdminCIDRs []string `json:"adminCIDRs,omitempty"`
+	// TLSCertificateArn is the ACM certificate the gateway load balancer terminates TLS with.
+	TLSCertificateArn string `json:"tlsCertificateArn,omitempty"`
 }
 
 // AWS brings AWS profiles up and down with Terraform/OpenTofu. Every command goes through
@@ -102,6 +106,8 @@ type AWSUpOptions struct {
 	NotifyEmail string
 	// TTL overrides the profile's guardrails.ttl.
 	TTL time.Duration
+	// TLSCertificateArn is an ACM certificate for the gateway load balancer (optional).
+	TLSCertificateArn string
 }
 
 // AWSUpResult is printed after an AWS bring-up.
@@ -398,6 +404,13 @@ func (a *AWS) Up(ctx context.Context, opts AWSUpOptions) (*AWSUpResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	rs.AdminCIDRs = cidrs
+	if opts.TLSCertificateArn != "" {
+		rs.TLSCertificateArn = opts.TLSCertificateArn
+	}
+	if rs.TLSCertificateArn == "" {
+		a.logf("warning: no --tls-cert-arn: the gateway load balancer serves plain HTTP (reachable from %s only)", strings.Join(cidrs, ", "))
+	}
 	if _, err := a.writeJSON("run.json", rs); err != nil {
 		return nil, err
 	}
@@ -484,8 +497,13 @@ func (a *AWS) bootstrapGitOps(ctx context.Context, kubeconfig string, src GitSou
 	}
 	wctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	key, err := LoadOrCreateAPIKey(a.stateDir())
+	if err != nil {
+		return err
+	}
 	g := &gitops{Runner: a.Runner, Root: a.Root, Log: a.Log, ProfileName: a.Profile.Metadata.Name, KubeContext: a.KubeContext(), Kubeconfig: kubeconfig,
-		RunID: rs.RunID, PollInterval: a.PollInterval, ModelsReady: rs.ModelsReady, WeightsBucket: bucket, Region: rs.Region}
+		RunID: rs.RunID, PollInterval: a.PollInterval, ModelsReady: rs.ModelsReady, WeightsBucket: bucket, Region: rs.Region,
+		APIKey: key, TLSCertificateArn: rs.TLSCertificateArn, SourceRanges: rs.AdminCIDRs}
 	if err := g.installArgoCD(wctx); err != nil {
 		return err
 	}
