@@ -25,6 +25,7 @@
 
 - Q: How does an unknown model get the OpenAI-style 404 without hiding `/v1/models`? → A: The serving render ships the AI Gateway's reserved `ai-eg-route-not-found-response-aibox` HTTPRouteFilter with the JSON body; the controller keeps an existing filter, so the route's own catch-all rule answers unknown models and no separate catch-all HTTPRoute exists. (decided by agent: a second `PathPrefix /` route ties with the reserved rule and, when it wins, captures `/v1/models`, which e2e-local showed)
 - Q: How is the local Envoy Service exposed? → A: NodePort 30080 with `externalTrafficPolicy: Cluster`; cloud overlays keep `Local`. (decided by agent: kind maps the port on the control-plane, which runs no Envoy pod)
+- Q: How fast does the gateway see new model server pods? → A: The Gateway's BackendTrafficPolicy sets `dns.dnsRefreshRate: 5s` (default 30 s) with `respectDnsTtl`. (decided by agent: model backends are headless Services; e2e-local got 503 `no healthy upstream` 14 s after the model server was ready)
 
 ## User Scenarios & Testing *(mandatory)*
 

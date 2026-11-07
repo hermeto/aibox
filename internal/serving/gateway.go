@@ -89,6 +89,9 @@ func route(ms []*models.Model) map[string]any {
 	}
 }
 
+// DNSRefreshRate bounds how long the gateway keeps a stale model backend address list.
+const DNSRefreshRate = "5s"
+
 // ModelNotFoundBody is the OpenAI-style error the gateway returns for a model without a route.
 const ModelNotFoundBody = `{"error":{"message":"The model does not exist or is not served by this AIBox environment.","type":"invalid_request_error","param":"model","code":"model_not_found"}}`
 
@@ -142,6 +145,11 @@ func rateLimits(p *profile.Profile) map[string]any {
 		"spec": map[string]any{
 			"targetRefs": []any{map[string]any{"group": "gateway.networking.k8s.io", "kind": "Gateway", "name": GatewayName}},
 			"rateLimit":  map[string]any{"type": "Global", "global": map[string]any{"rules": rules}},
+			// Model backends are headless Services resolved by DNS. Envoy Gateway refreshes DNS
+			// every 30 s by default, so a backend resolved before its first pod was ready answered
+			// 503 for up to 30 s after `aibox up` returned. One BackendTrafficPolicy per target,
+			// so the DNS settings live here with the rate limits.
+			"dns": map[string]any{"dnsRefreshRate": DNSRefreshRate, "respectDnsTtl": true},
 		},
 	}
 }

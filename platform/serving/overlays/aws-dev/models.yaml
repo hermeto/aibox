@@ -248,6 +248,9 @@ metadata:
   name: rate-limits
   namespace: aibox-gateway
 spec:
+  dns:
+    dnsRefreshRate: 5s
+    respectDnsTtl: true
   rateLimit:
     global:
       rules:

@@ -266,3 +266,10 @@ func TestModelNotFoundFilterTakesTheControllerName(t *testing.T) {
 		t.Fatalf("body %v %v", body, err)
 	}
 }
+
+func TestRateLimitPolicyRefreshesModelBackendsQuickly(t *testing.T) {
+	dns, _ := rateLimits(loadProfile(t, "local"))["spec"].(map[string]any)["dns"].(map[string]any)
+	if dns["dnsRefreshRate"] != DNSRefreshRate || dns["respectDnsTtl"] != true {
+		t.Fatalf("dns settings %v", dns)
+	}
+}

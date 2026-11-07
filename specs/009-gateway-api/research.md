@@ -31,3 +31,6 @@
   (`PathPrefix /`) to every generated HTTPRoute and creates its `ai-eg-route-not-found-response-<route>`
   filter only when missing ([`internal/controller/ai_gateway_route.go`](https://github.com/envoyproxy/ai-gateway/blob/v1.2.0/internal/controller/ai_gateway_route.go)).
   Shipping that filter sets the 404 body; re-check this behavior when bumping the AI Gateway.
+- **Backend DNS refresh.** `BackendTrafficPolicy.spec.dns.dnsRefreshRate` defaults to 30 s
+  (gateway-crds-helm v1.9.3). FQDN Backends on headless Services resolved before the first pod
+  is ready stay empty until the next refresh, so the policy sets 5 s.
